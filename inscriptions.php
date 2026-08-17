@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /*
 |--------------------------------------------------------------------------
-| SOFTEXPRESS - GESTION DES PRODUITS
+| SOFTEXPRESS - GESTION DES INSCRIPTIONS
 |--------------------------------------------------------------------------
 */
 
@@ -29,53 +29,6 @@ function e($value): string
 
 /*
 |--------------------------------------------------------------------------
-| FORMATAGE DU PRIX
-|--------------------------------------------------------------------------
-*/
-
-function fcfa($prix): string
-{
-    return number_format(
-        (float) $prix,
-        0,
-        ',',
-        ' '
-    ) . ' FCFA';
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| CHEMIN DE L'IMAGE
-|--------------------------------------------------------------------------
-*/
-
-function produitImage(?string $image): string
-{
-    $image = basename(
-        trim(
-            (string) $image
-        )
-    );
-
-    if ($image !== '') {
-
-        $chemin = __DIR__
-            . '/../assets/images/produits/'
-            . $image;
-
-        if (is_file($chemin)) {
-
-            return '../assets/images/produits/' . $image;
-        }
-    }
-
-    return '../assets/images/produits/laptop.jpg';
-}
-
-
-/*
-|--------------------------------------------------------------------------
 | MESSAGES
 |--------------------------------------------------------------------------
 */
@@ -86,7 +39,7 @@ $erreur = '';
 
 /*
 |--------------------------------------------------------------------------
-| SUPPRESSION D'UN PRODUIT
+| SUPPRESSION D'UNE INSCRIPTION
 |--------------------------------------------------------------------------
 */
 
@@ -103,12 +56,12 @@ if (
 
     if (!$id || $id <= 0) {
 
-        $erreur = 'Produit invalide.';
+        $erreur = 'Inscription invalide.';
 
     } else {
 
         $stmt = $conn->prepare("
-            DELETE FROM produits
+            DELETE FROM inscriptions
             WHERE id = ?
             LIMIT 1
         ");
@@ -130,12 +83,12 @@ if (
                 if ($stmt->affected_rows > 0) {
 
                     $message =
-                        'Produit supprimé avec succès.';
+                        'Inscription supprimée avec succès.';
 
                 } else {
 
                     $erreur =
-                        'Produit introuvable.';
+                        'Inscription introuvable.';
                 }
 
             } else {
@@ -165,11 +118,16 @@ $recherche = trim(
 
 /*
 |--------------------------------------------------------------------------
-| RÉCUPÉRATION DES PRODUITS
+| RÉCUPÉRATION DES INSCRIPTIONS
+|--------------------------------------------------------------------------
+|
+| La table inscriptions contient formation_id.
+| On utilise donc une jointure avec formations
+| pour afficher directement le titre de la formation.
 |--------------------------------------------------------------------------
 */
 
-$produits = [];
+$inscriptions = [];
 
 
 if ($recherche !== '') {
@@ -178,40 +136,46 @@ if ($recherche !== '') {
 
     $stmt = $conn->prepare("
         SELECT
-            id,
-            nom,
-            description,
-            prix,
-            stock,
-            image,
-            date_creation
-        FROM produits
+            i.id,
+            i.nom,
+            i.prenom,
+            i.telephone,
+            i.email,
+            i.formation_id,
+            i.date_inscription,
+            f.titre AS formation_titre
+        FROM inscriptions i
+        LEFT JOIN formations f
+            ON f.id = i.formation_id
         WHERE
-            nom LIKE ?
-            OR description LIKE ?
-        ORDER BY id DESC
+            i.nom LIKE ?
+            OR i.prenom LIKE ?
+            OR i.telephone LIKE ?
+            OR i.email LIKE ?
+            OR f.titre LIKE ?
+        ORDER BY i.date_inscription DESC, i.id DESC
     ");
 
     if ($stmt) {
 
         $stmt->bind_param(
-            'ss',
+            'sssss',
+            $motif,
+            $motif,
+            $motif,
             $motif,
             $motif
         );
 
         $stmt->execute();
 
-        $result =
-            $stmt->get_result();
+        $result = $stmt->get_result();
 
         while (
-            $ligne =
-            $result->fetch_assoc()
+            $ligne = $result->fetch_assoc()
         ) {
 
-            $produits[] =
-                $ligne;
+            $inscriptions[] = $ligne;
         }
 
         $stmt->close();
@@ -221,55 +185,28 @@ if ($recherche !== '') {
 
     $result = $conn->query("
         SELECT
-            id,
-            nom,
-            description,
-            prix,
-            stock,
-            image,
-            date_creation
-        FROM produits
-        ORDER BY id DESC
+            i.id,
+            i.nom,
+            i.prenom,
+            i.telephone,
+            i.email,
+            i.formation_id,
+            i.date_inscription,
+            f.titre AS formation_titre
+        FROM inscriptions i
+        LEFT JOIN formations f
+            ON f.id = i.formation_id
+        ORDER BY i.date_inscription DESC, i.id DESC
     ");
 
     if ($result) {
 
         while (
-            $ligne =
-            $result->fetch_assoc()
+            $ligne = $result->fetch_assoc()
         ) {
 
-            $produits[] =
-                $ligne;
+            $inscriptions[] = $ligne;
         }
-    }
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| STATISTIQUES DE LA PAGE
-|--------------------------------------------------------------------------
-*/
-
-$totalProduits = count($produits);
-
-$totalStock = 0;
-
-$produitsRupture = 0;
-
-foreach ($produits as $produit) {
-
-    $stock =
-        (int) (
-            $produit['stock'] ?? 0
-        );
-
-    $totalStock += $stock;
-
-    if ($stock <= 0) {
-
-        $produitsRupture++;
     }
 }
 
@@ -289,9 +226,7 @@ require_once __DIR__ . '/includes/header.php';
 
 
     <?php
-
     require_once __DIR__ . '/includes/sidebar.php';
-
     ?>
 
 
@@ -307,15 +242,15 @@ require_once __DIR__ . '/includes/header.php';
             <div>
 
                 <span class="admin-eyebrow">
-                    GESTION DES ÉQUIPEMENTS
+                    GESTION DES INSCRIPTIONS
                 </span>
 
                 <h1>
-                    Produits
+                    Inscriptions
                 </h1>
 
                 <p>
-                    Gérez les équipements informatiques proposés par SOFTEXPRESS.
+                    Consultez et gérez les inscriptions aux formations.
                 </p>
 
             </div>
@@ -323,201 +258,13 @@ require_once __DIR__ . '/includes/header.php';
 
             <div class="admin-date">
 
-                <i class="fa-solid fa-laptop"></i>
+                <i class="fa-solid fa-file-signature"></i>
 
-                <?= $totalProduits ?>
+                <?= count($inscriptions) ?>
 
-                produit(s)
-
-            </div>
-
-        </div>
-
-
-        <!-- =====================================================
-             STATISTIQUES
-        ====================================================== -->
-
-        <div
-            style="
-                display:grid;
-                grid-template-columns:repeat(3,minmax(0,1fr));
-                gap:15px;
-                margin-bottom:25px;
-            "
-        >
-
-
-            <div
-                style="
-                    padding:18px;
-                    background:#ffffff;
-                    border:1px solid #e6ebef;
-                    border-radius:12px;
-                    box-shadow:0 5px 18px rgba(0,0,0,0.035);
-                "
-            >
-
-                <div
-                    style="
-                        width:42px;
-                        height:42px;
-                        margin-bottom:10px;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        color:#00a3e0;
-                        background:#eaf8fd;
-                        border-radius:9px;
-                    "
-                >
-
-                    <i class="fa-solid fa-box"></i>
-
-                </div>
-
-
-                <span
-                    style="
-                        display:block;
-                        color:#7b8796;
-                        font-size:11px;
-                        font-weight:700;
-                    "
-                >
-                    PRODUITS
-                </span>
-
-
-                <strong
-                    style="
-                        display:block;
-                        margin-top:5px;
-                        color:#18212f;
-                        font-size:24px;
-                    "
-                >
-
-                    <?= $totalProduits ?>
-
-                </strong>
+                inscription(s)
 
             </div>
-
-
-            <div
-                style="
-                    padding:18px;
-                    background:#ffffff;
-                    border:1px solid #e6ebef;
-                    border-radius:12px;
-                    box-shadow:0 5px 18px rgba(0,0,0,0.035);
-                "
-            >
-
-                <div
-                    style="
-                        width:42px;
-                        height:42px;
-                        margin-bottom:10px;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        color:#15965a;
-                        background:#eaf8f0;
-                        border-radius:9px;
-                    "
-                >
-
-                    <i class="fa-solid fa-cubes-stacked"></i>
-
-                </div>
-
-
-                <span
-                    style="
-                        display:block;
-                        color:#7b8796;
-                        font-size:11px;
-                        font-weight:700;
-                    "
-                >
-                    STOCK TOTAL
-                </span>
-
-
-                <strong
-                    style="
-                        display:block;
-                        margin-top:5px;
-                        color:#18212f;
-                        font-size:24px;
-                    "
-                >
-
-                    <?= $totalStock ?>
-
-                </strong>
-
-            </div>
-
-
-            <div
-                style="
-                    padding:18px;
-                    background:#ffffff;
-                    border:1px solid #e6ebef;
-                    border-radius:12px;
-                    box-shadow:0 5px 18px rgba(0,0,0,0.035);
-                "
-            >
-
-                <div
-                    style="
-                        width:42px;
-                        height:42px;
-                        margin-bottom:10px;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        color:#d13b3b;
-                        background:#fff0f0;
-                        border-radius:9px;
-                    "
-                >
-
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-
-                </div>
-
-
-                <span
-                    style="
-                        display:block;
-                        color:#7b8796;
-                        font-size:11px;
-                        font-weight:700;
-                    "
-                >
-                    RUPTURE
-                </span>
-
-
-                <strong
-                    style="
-                        display:block;
-                        margin-top:5px;
-                        color:#18212f;
-                        font-size:24px;
-                    "
-                >
-
-                    <?= $produitsRupture ?>
-
-                </strong>
-
-            </div>
-
 
         </div>
 
@@ -585,7 +332,7 @@ require_once __DIR__ . '/includes/header.php';
 
             <form
                 method="GET"
-                action="produits.php"
+                action="inscriptions.php"
                 style="
                     display:flex;
                     gap:12px;
@@ -618,7 +365,7 @@ require_once __DIR__ . '/includes/header.php';
                         type="text"
                         name="recherche"
                         value="<?= e($recherche) ?>"
-                        placeholder="Rechercher un produit..."
+                        placeholder="Rechercher par nom, email, téléphone ou formation..."
                         style="
                             width:100%;
                             height:46px;
@@ -658,7 +405,7 @@ require_once __DIR__ . '/includes/header.php';
                 <?php if ($recherche !== ''): ?>
 
                     <a
-                        href="produits.php"
+                        href="inscriptions.php"
                         style="
                             height:46px;
                             padding:0 18px;
@@ -686,7 +433,7 @@ require_once __DIR__ . '/includes/header.php';
 
 
         <!-- =====================================================
-             LISTE DES PRODUITS
+             TABLEAU
         ====================================================== -->
 
         <section class="admin-panel">
@@ -695,17 +442,17 @@ require_once __DIR__ . '/includes/header.php';
             <div class="admin-panel-header">
 
                 <span>
-                    CATALOGUE
+                    INSCRIPTIONS
                 </span>
 
                 <h2>
-                    Liste des produits
+                    Liste des inscrits
                 </h2>
 
             </div>
 
 
-            <?php if (empty($produits)): ?>
+            <?php if (empty($inscriptions)): ?>
 
 
                 <div
@@ -717,7 +464,7 @@ require_once __DIR__ . '/includes/header.php';
                 >
 
                     <i
-                        class="fa-solid fa-box-open"
+                        class="fa-solid fa-file-signature"
                         style="
                             font-size:38px;
                             margin-bottom:15px;
@@ -727,7 +474,7 @@ require_once __DIR__ . '/includes/header.php';
 
 
                     <p>
-                        Aucun produit trouvé.
+                        Aucune inscription trouvée.
                     </p>
 
                 </div>
@@ -748,7 +495,7 @@ require_once __DIR__ . '/includes/header.php';
                         style="
                             width:100%;
                             border-collapse:collapse;
-                            min-width:1000px;
+                            min-width:950px;
                         "
                     >
 
@@ -768,7 +515,7 @@ require_once __DIR__ . '/includes/header.php';
                                         font-size:11px;
                                     "
                                 >
-                                    PRODUIT
+                                    ID
                                 </th>
 
 
@@ -782,7 +529,7 @@ require_once __DIR__ . '/includes/header.php';
                                         font-size:11px;
                                     "
                                 >
-                                    DESCRIPTION
+                                    PARTICIPANT
                                 </th>
 
 
@@ -796,21 +543,21 @@ require_once __DIR__ . '/includes/header.php';
                                         font-size:11px;
                                     "
                                 >
-                                    PRIX
+                                    CONTACT
                                 </th>
 
 
                                 <th
                                     style="
                                         padding:14px;
-                                        text-align:center;
+                                        text-align:left;
                                         color:#7b8796;
                                         background:#f7f9fb;
                                         border-bottom:1px solid #e5eaf0;
                                         font-size:11px;
                                     "
                                 >
-                                    STOCK
+                                    FORMATION
                                 </th>
 
 
@@ -851,86 +598,110 @@ require_once __DIR__ . '/includes/header.php';
 
 
                         <?php foreach (
-                            $produits
-                            as $produit
+                            $inscriptions
+                            as $inscription
                         ): ?>
 
 
                             <?php
 
-                            $idProduit =
-                                (int) $produit['id'];
+                            $idInscription =
+                                (int) $inscription['id'];
 
-                            $nomProduit =
+                            $prenom =
                                 trim(
                                     (string) (
-                                        $produit['nom']
+                                        $inscription['prenom']
                                         ?? ''
                                     )
                                 );
 
-                            $description =
+                            $nom =
                                 trim(
-                                    strip_tags(
-                                        (string) (
-                                            $produit['description']
-                                            ?? ''
-                                        )
+                                    (string) (
+                                        $inscription['nom']
+                                        ?? ''
                                     )
                                 );
 
-                            if (
-                                mb_strlen(
-                                    $description
-                                ) > 75
-                            ) {
+                            $nomComplet =
+                                trim(
+                                    $prenom . ' ' . $nom
+                                );
 
-                                $description =
+
+                            $initiales = '';
+
+                            if ($prenom !== '') {
+
+                                $initiales .=
                                     mb_substr(
-                                        $description,
+                                        $prenom,
                                         0,
-                                        75
-                                    ) . '…';
+                                        1
+                                    );
+                            }
+
+                            if ($nom !== '') {
+
+                                $initiales .=
+                                    mb_substr(
+                                        $nom,
+                                        0,
+                                        1
+                                    );
+                            }
+
+                            if ($initiales === '') {
+
+                                $initiales = 'I';
+                            }
+
+                            $initiales =
+                                mb_strtoupper(
+                                    $initiales
+                                );
+
+
+                            $formationTitre =
+                                trim(
+                                    (string) (
+                                        $inscription[
+                                            'formation_titre'
+                                        ] ?? ''
+                                    )
+                                );
+
+
+                            if ($formationTitre === '') {
+
+                                $formationTitre =
+                                    'Formation supprimée';
                             }
 
 
-                            $prix =
-                                (float) (
-                                    $produit['prix']
-                                    ?? 0
-                                );
-
-                            $stock =
-                                (int) (
-                                    $produit['stock']
-                                    ?? 0
-                                );
-
-
-                            $dateCreation = '';
+                            $dateInscription = '';
 
                             if (
                                 !empty(
-                                    $produit[
-                                        'date_creation'
+                                    $inscription[
+                                        'date_inscription'
                                     ]
                                 )
                             ) {
 
                                 $timestamp =
                                     strtotime(
-                                        $produit[
-                                            'date_creation'
+                                        $inscription[
+                                            'date_inscription'
                                         ]
                                     );
 
-                                if (
-                                    $timestamp !== false
-                                ) {
+                                if ($timestamp !== false) {
 
-                                    $dateCreation =
+                                    $dateInscription =
                                         date(
-                                            'd/m/Y',
+                                            'd/m/Y à H:i',
                                             $timestamp
                                         );
                                 }
@@ -942,7 +713,23 @@ require_once __DIR__ . '/includes/header.php';
                             <tr>
 
 
-                                <!-- PRODUIT -->
+                                <!-- ID -->
+
+                                <td
+                                    style="
+                                        padding:15px 14px;
+                                        border-bottom:1px solid #edf0f3;
+                                        color:#8a95a4;
+                                        font-size:12px;
+                                    "
+                                >
+
+                                    #<?= $idInscription ?>
+
+                                </td>
+
+
+                                <!-- PARTICIPANT -->
 
                                 <td
                                     style="
@@ -955,160 +742,150 @@ require_once __DIR__ . '/includes/header.php';
                                         style="
                                             display:flex;
                                             align-items:center;
-                                            gap:12px;
+                                            gap:11px;
                                         "
                                     >
 
-
-                                        <img
-                                            src="<?= e(
-                                                produitImage(
-                                                    $produit['image']
-                                                )
-                                            ) ?>"
-                                            alt="<?= e($nomProduit) ?>"
+                                        <span
                                             style="
-                                                width:58px;
-                                                height:58px;
-                                                object-fit:cover;
-                                                border-radius:9px;
-                                                border:1px solid #e5eaf0;
-                                                background:#f7f9fb;
+                                                width:38px;
+                                                height:38px;
+                                                display:flex;
+                                                align-items:center;
+                                                justify-content:center;
+                                                flex-shrink:0;
+                                                border-radius:50%;
+                                                color:#fff;
+                                                background:linear-gradient(
+                                                    135deg,
+                                                    #f99d1c,
+                                                    #00a3e0
+                                                );
+                                                font-size:11px;
+                                                font-weight:800;
                                             "
                                         >
 
+                                            <?= e($initiales) ?>
 
-                                        <div>
-
-                                            <strong
-                                                style="
-                                                    display:block;
-                                                    color:#26313e;
-                                                    font-size:13px;
-                                                    margin-bottom:4px;
-                                                "
-                                            >
-
-                                                <?= e(
-                                                    $nomProduit !== ''
-                                                        ? $nomProduit
-                                                        : 'Produit'
-                                                ) ?>
-
-                                            </strong>
+                                        </span>
 
 
-                                            <span
-                                                style="
-                                                    color:#9aa5b4;
-                                                    font-size:10px;
-                                                "
-                                            >
+                                        <strong
+                                            style="
+                                                color:#26313e;
+                                                font-size:13px;
+                                            "
+                                        >
 
-                                                #<?= $idProduit ?>
+                                            <?= e(
+                                                $nomComplet !== ''
+                                                    ? $nomComplet
+                                                    : 'Participant'
+                                            ) ?>
 
-                                            </span>
-
-                                        </div>
+                                        </strong>
 
                                     </div>
 
                                 </td>
 
 
-                                <!-- DESCRIPTION -->
+                                <!-- CONTACT -->
 
                                 <td
                                     style="
                                         padding:15px 14px;
                                         border-bottom:1px solid #edf0f3;
-                                        color:#687385;
-                                        font-size:12px;
-                                        max-width:260px;
                                     "
                                 >
 
-                                    <?= e(
-                                        $description
-                                    ) ?>
+                                    <div
+                                        style="
+                                            display:flex;
+                                            flex-direction:column;
+                                            gap:4px;
+                                        "
+                                    >
+
+                                        <span
+                                            style="
+                                                color:#566170;
+                                                font-size:12px;
+                                            "
+                                        >
+
+                                            <i
+                                                class="fa-solid fa-envelope"
+                                                style="
+                                                    width:16px;
+                                                    color:#00a3e0;
+                                                "
+                                            ></i>
+
+                                            <?= e(
+                                                $inscription['email']
+                                            ) ?>
+
+                                        </span>
+
+
+                                        <span
+                                            style="
+                                                color:#7b8796;
+                                                font-size:11px;
+                                            "
+                                        >
+
+                                            <i
+                                                class="fa-solid fa-phone"
+                                                style="
+                                                    width:16px;
+                                                    color:#f99d1c;
+                                                "
+                                            ></i>
+
+                                            <?= e(
+                                                $inscription['telephone']
+                                            ) ?>
+
+                                        </span>
+
+                                    </div>
 
                                 </td>
 
 
-                                <!-- PRIX -->
+                                <!-- FORMATION -->
 
                                 <td
                                     style="
                                         padding:15px 14px;
                                         border-bottom:1px solid #edf0f3;
-                                        color:#18212f;
-                                        font-size:13px;
-                                        font-weight:800;
-                                        white-space:nowrap;
                                     "
                                 >
 
-                                    <?= e(
-                                        fcfa($prix)
-                                    ) ?>
+                                    <span
+                                        style="
+                                            display:inline-flex;
+                                            align-items:center;
+                                            gap:7px;
+                                            padding:7px 10px;
+                                            border-radius:8px;
+                                            color:#087eaa;
+                                            background:#eaf8fd;
+                                            font-size:11px;
+                                            font-weight:700;
+                                        "
+                                    >
 
-                                </td>
+                                        <i class="fa-solid fa-graduation-cap"></i>
 
+                                        <?= e(
+                                            $formationTitre
+                                        ) ?>
 
-                                <!-- STOCK -->
-
-                                <td
-                                    style="
-                                        padding:15px 14px;
-                                        border-bottom:1px solid #edf0f3;
-                                        text-align:center;
-                                    "
-                                >
-
-                                    <?php if ($stock > 0): ?>
-
-                                        <span
-                                            style="
-                                                display:inline-flex;
-                                                align-items:center;
-                                                justify-content:center;
-                                                min-width:60px;
-                                                padding:6px 9px;
-                                                border-radius:20px;
-                                                color:#168746;
-                                                background:#edf9f2;
-                                                font-size:10px;
-                                                font-weight:800;
-                                            "
-                                        >
-
-                                            <?= $stock ?>
-
-                                        </span>
-
-                                    <?php else: ?>
-
-                                        <span
-                                            style="
-                                                display:inline-flex;
-                                                align-items:center;
-                                                gap:5px;
-                                                padding:6px 9px;
-                                                border-radius:20px;
-                                                color:#c62828;
-                                                background:#fff0f0;
-                                                font-size:10px;
-                                                font-weight:800;
-                                            "
-                                        >
-
-                                            <i class="fa-solid fa-circle-exclamation"></i>
-
-                                            Rupture
-
-                                        </span>
-
-                                    <?php endif; ?>
+                                    </span>
 
                                 </td>
 
@@ -1134,7 +911,7 @@ require_once __DIR__ . '/includes/header.php';
                                     ></i>
 
                                     <?= e(
-                                        $dateCreation
+                                        $dateInscription
                                     ) ?>
 
                                 </td>
@@ -1152,11 +929,11 @@ require_once __DIR__ . '/includes/header.php';
 
                                     <form
                                         method="POST"
-                                        action="produits.php"
+                                        action="inscriptions.php"
                                         style="display:inline;"
                                         onsubmit="
                                             return confirm(
-                                                'Voulez-vous vraiment supprimer ce produit ?'
+                                                'Voulez-vous vraiment supprimer cette inscription ?'
                                             );
                                         "
                                     >
@@ -1164,13 +941,13 @@ require_once __DIR__ . '/includes/header.php';
                                         <input
                                             type="hidden"
                                             name="supprimer_id"
-                                            value="<?= $idProduit ?>"
+                                            value="<?= $idInscription ?>"
                                         >
 
 
                                         <button
                                             type="submit"
-                                            title="Supprimer le produit"
+                                            title="Supprimer l'inscription"
                                             style="
                                                 width:36px;
                                                 height:36px;

@@ -1,0 +1,882 @@
+/* =========================================================
+   SOFTEXPRESS
+   DEMANDE DE MAINTENANCE
+========================================================= */
+
+
+/* =========================================================
+   BANNIÈRE
+========================================================= */
+
+.request-banner {
+    position: relative;
+
+    overflow: hidden;
+
+    background:
+        linear-gradient(
+            135deg,
+            #061c2c,
+            #006583,
+            #00A3E0
+        );
+}
+
+.request-banner::before {
+    content: "";
+
+    position: absolute;
+
+    width: 430px;
+    height: 430px;
+
+    border: 70px solid rgba(249,157,28,.09);
+
+    border-radius: 50%;
+
+    right: -180px;
+    top: -240px;
+}
+
+.request-banner::after {
+    content: "";
+
+    position: absolute;
+
+    width: 280px;
+    height: 280px;
+
+    border: 40px solid rgba(255,255,255,.06);
+
+    border-radius: 50%;
+
+    left: -150px;
+    bottom: -190px;
+}
+
+.request-banner-content {
+    position: relative;
+
+    z-index: 2;
+
+    padding-top: 65px;
+    padding-bottom: 65px;
+
+    color: white;
+}
+
+.request-eyebrow {
+    margin: 0 0 12px;
+
+    color: #F99D1C;
+
+    font-size: 11px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.8px;
+}
+
+.request-banner h1 {
+    margin: 0 0 15px;
+
+    font-size: clamp(38px, 5vw, 55px);
+
+    line-height: 1.1;
+}
+
+.request-banner h1 span {
+    color: #F99D1C;
+}
+
+.request-banner-content > p:not(.request-eyebrow) {
+    max-width: 620px;
+
+    margin: 0 0 22px;
+
+    color: rgba(255,255,255,.84);
+
+    font-size: 15px;
+
+    line-height: 1.7;
+}
+
+.request-breadcrumb {
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    font-size: 12px;
+}
+
+.request-breadcrumb a {
+    color: #9ee4fa;
+
+    text-decoration: none;
+}
+
+.request-breadcrumb span {
+    color: rgba(255,255,255,.4);
+}
+
+
+/* =========================================================
+   PAGE
+========================================================= */
+
+.request-page {
+    padding: 75px 0;
+
+    background: #f6f9fb;
+
+    min-height: 600px;
+}
+
+
+/* =========================================================
+   FORMULAIRE
+========================================================= */
+
+.request-section {
+    display: grid;
+
+    grid-template-columns:
+        .85fr
+        1.15fr;
+
+    gap: 45px;
+
+    align-items: start;
+}
+
+
+/* =========================================================
+   INFORMATIONS
+========================================================= */
+
+.request-info {
+    padding: 20px 5px;
+}
+
+.request-label {
+    margin: 0 0 10px;
+
+    color: #00A3E0;
+
+    font-size: 11px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.8px;
+}
+
+.request-info h2 {
+    margin: 0 0 18px;
+
+    color: #111827;
+
+    font-size: clamp(30px, 4vw, 42px);
+
+    line-height: 1.2;
+}
+
+.request-info > p:not(.request-label) {
+    max-width: 520px;
+
+    color: #697586;
+
+    font-size: 14px;
+
+    line-height: 1.8;
+}
+
+
+/* =========================================================
+   SERVICE SÉLECTIONNÉ
+========================================================= */
+
+.selected-service {
+    display: flex;
+
+    gap: 15px;
+
+    margin-top: 30px;
+
+    padding: 20px;
+
+    background: white;
+
+    border: 1px solid #e4edf1;
+
+    border-left: 4px solid #00A3E0;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 8px 25px rgba(0,0,0,.04);
+}
+
+.selected-service-icon {
+    flex-shrink: 0;
+
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 10px;
+
+    color: white;
+
+    background: #00A3E0;
+
+    font-size: 18px;
+}
+
+.selected-service span {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: #F99D1C;
+
+    font-size: 9px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.2px;
+}
+
+.selected-service strong {
+    display: block;
+
+    color: #17202a;
+
+    font-size: 17px;
+}
+
+.selected-service p {
+    margin: 7px 0 0;
+
+    color: #788493;
+
+    font-size: 11px;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   SERVICE ABSENT
+========================================================= */
+
+.no-service {
+    display: flex;
+
+    gap: 13px;
+
+    margin-top: 30px;
+
+    padding: 18px;
+
+    background: #fff8e9;
+
+    border: 1px solid #f8dfae;
+
+    border-radius: 10px;
+}
+
+.no-service > i {
+    color: #e59a00;
+
+    font-size: 22px;
+}
+
+.no-service strong {
+    display: block;
+
+    color: #634500;
+
+    font-size: 13px;
+}
+
+.no-service p {
+    margin: 5px 0 0;
+
+    color: #826b43;
+
+    font-size: 11px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   AIDE
+========================================================= */
+
+.request-help {
+    display: flex;
+
+    align-items: center;
+
+    gap: 13px;
+
+    margin-top: 25px;
+
+    padding-top: 25px;
+
+    border-top: 1px solid #e3e9ed;
+}
+
+.request-help > div:first-child {
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    color: #00A3E0;
+
+    background: #e9f8fd;
+}
+
+.request-help strong {
+    display: block;
+
+    color: #26313c;
+
+    font-size: 12px;
+}
+
+.request-help span {
+    display: block;
+
+    margin-top: 3px;
+
+    color: #7b8794;
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   BOÎTE FORMULAIRE
+========================================================= */
+
+.request-form-box {
+    padding: 35px;
+
+    background: white;
+
+    border: 1px solid #e4eaee;
+
+    border-radius: 16px;
+
+    box-shadow:
+        0 12px 40px rgba(0,0,0,.06);
+}
+
+
+/* =========================================================
+   ERREURS
+========================================================= */
+
+.request-errors {
+    margin-bottom: 25px;
+
+    padding: 15px 18px;
+
+    border-left: 4px solid #d84444;
+
+    border-radius: 8px;
+
+    background: #fff1f1;
+
+    color: #8e2828;
+
+    font-size: 12px;
+}
+
+.request-errors strong {
+    display: block;
+
+    margin-bottom: 8px;
+}
+
+.request-errors ul {
+    margin: 0;
+
+    padding-left: 18px;
+}
+
+.request-errors li {
+    margin: 4px 0;
+}
+
+
+/* =========================================================
+   LIGNES FORMULAIRE
+========================================================= */
+
+.form-row {
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        1fr;
+
+    gap: 16px;
+}
+
+
+/* =========================================================
+   GROUPES
+========================================================= */
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: #35404d;
+
+    font-size: 12px;
+
+    font-weight: 700;
+}
+
+.form-group label span {
+    color: #F99D1C;
+}
+
+
+/* =========================================================
+   INPUT
+========================================================= */
+
+.input-wrap {
+    position: relative;
+}
+
+.input-wrap > i {
+    position: absolute;
+
+    left: 14px;
+
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    color: #94a0ad;
+
+    font-size: 13px;
+
+    pointer-events: none;
+}
+
+.input-wrap input {
+    width: 100%;
+
+    height: 48px;
+
+    box-sizing: border-box;
+
+    padding:
+        0 14px 0 40px;
+
+    color: #1d2733;
+
+    background: #fbfcfd;
+
+    border: 1px solid #dce4e9;
+
+    border-radius: 7px;
+
+    outline: none;
+
+    font-family: inherit;
+
+    font-size: 13px;
+
+    transition: .2s ease;
+}
+
+.input-wrap input:focus {
+    border-color: #00A3E0;
+
+    background: white;
+
+    box-shadow:
+        0 0 0 3px rgba(0,163,224,.08);
+}
+
+.input-wrap input::placeholder {
+    color: #a8b1bb;
+}
+
+
+/* =========================================================
+   TEXTAREA
+========================================================= */
+
+.textarea-wrap {
+    position: relative;
+}
+
+.textarea-wrap > i {
+    position: absolute;
+
+    left: 14px;
+    top: 16px;
+
+    color: #94a0ad;
+
+    font-size: 13px;
+}
+
+.textarea-wrap textarea {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    min-height: 145px;
+
+    padding:
+        13px 14px 13px 40px;
+
+    resize: vertical;
+
+    color: #1d2733;
+
+    background: #fbfcfd;
+
+    border: 1px solid #dce4e9;
+
+    border-radius: 7px;
+
+    outline: none;
+
+    font-family: inherit;
+
+    font-size: 13px;
+
+    line-height: 1.6;
+
+    transition: .2s ease;
+}
+
+.textarea-wrap textarea:focus {
+    border-color: #00A3E0;
+
+    background: white;
+
+    box-shadow:
+        0 0 0 3px rgba(0,163,224,.08);
+}
+
+.textarea-wrap textarea::placeholder {
+    color: #a8b1bb;
+}
+
+.form-group small {
+    display: block;
+
+    margin-top: 6px;
+
+    color: #8c97a3;
+
+    font-size: 10px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   BOUTONS
+========================================================= */
+
+.form-actions {
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    padding-top: 10px;
+
+    border-top: 1px solid #edf0f2;
+}
+
+.request-btn {
+    min-height: 46px;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 8px;
+
+    padding: 0 18px;
+
+    border-radius: 7px;
+
+    text-decoration: none;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: .25s ease;
+}
+
+.request-btn.primary {
+    color: white;
+
+    background: #F99D1C;
+
+    border: 1px solid #F99D1C;
+}
+
+.request-btn.primary:hover {
+    background: #e58b0b;
+
+    border-color: #e58b0b;
+
+    transform: translateY(-2px);
+}
+
+.request-btn.primary:disabled {
+    opacity: .5;
+
+    cursor: not-allowed;
+
+    transform: none;
+}
+
+.request-btn.secondary {
+    color: #00A3E0;
+
+    background: white;
+
+    border: 1px solid #b9dfe9;
+}
+
+.request-btn.secondary:hover {
+    color: white;
+
+    background: #00A3E0;
+
+    border-color: #00A3E0;
+}
+
+
+/* =========================================================
+   SUCCÈS
+========================================================= */
+
+.request-success {
+    max-width: 720px;
+
+    margin: 20px auto;
+
+    padding: 55px 45px;
+
+    text-align: center;
+
+    background: white;
+
+    border: 1px solid #e2ecef;
+
+    border-radius: 18px;
+
+    box-shadow:
+        0 15px 45px rgba(0,0,0,.06);
+}
+
+.success-icon {
+    width: 80px;
+    height: 80px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    margin: 0 auto 20px;
+
+    border-radius: 50%;
+
+    color: #18a05a;
+
+    background: #eaf9f0;
+
+    font-size: 40px;
+}
+
+.success-label {
+    margin: 0 0 10px;
+
+    color: #18a05a;
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.5px;
+}
+
+.request-success h2 {
+    margin: 0 0 15px;
+
+    color: #17202a;
+
+    font-size: 30px;
+}
+
+.request-success > p:not(.success-label) {
+    max-width: 520px;
+
+    margin: 0 auto;
+
+    color: #697586;
+
+    font-size: 14px;
+
+    line-height: 1.8;
+}
+
+.success-service {
+    margin: 25px auto;
+
+    max-width: 400px;
+
+    padding: 17px;
+
+    border-radius: 10px;
+
+    background: #f3fafc;
+
+    border: 1px solid #d9eef4;
+}
+
+.success-service span {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: #00A3E0;
+
+    font-size: 10px;
+
+    font-weight: 800;
+}
+
+.success-service strong {
+    color: #25313c;
+
+    font-size: 16px;
+}
+
+.success-actions {
+    display: flex;
+
+    justify-content: center;
+
+    flex-wrap: wrap;
+
+    gap: 10px;
+
+    margin-top: 25px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .request-section {
+        grid-template-columns: 1fr;
+
+        gap: 25px;
+    }
+
+    .request-info {
+        padding: 0;
+    }
+}
+
+
+@media (max-width: 600px) {
+
+    .request-page {
+        padding: 50px 0;
+    }
+
+    .request-banner-content {
+        padding-top: 50px;
+        padding-bottom: 50px;
+    }
+
+    .request-banner h1 {
+        font-size: 36px;
+    }
+
+    .request-form-box {
+        padding: 22px 18px;
+
+        border-radius: 12px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+
+        gap: 0;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .form-actions .request-btn {
+        width: 100%;
+    }
+
+    .request-success {
+        padding: 40px 20px;
+    }
+
+    .request-success h2 {
+        font-size: 25px;
+    }
+
+    .success-actions {
+        flex-direction: column;
+    }
+
+    .success-actions .request-btn {
+        width: 100%;
+    }
+
+}

@@ -3,185 +3,26 @@ declare(strict_types=1);
 
 /*
 |--------------------------------------------------------------------------
-| SOFTEXPRESS - ACTUALITÉS
-|--------------------------------------------------------------------------
-| Table :
-| actualites
-|
-| id
-| titre
-| contenu
-| image
-| auteur_id
-| date_publication
+| SOFTEXPRESS - GESTION DES ACTUALITÉS
 |--------------------------------------------------------------------------
 */
 
+require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/../config/database.php';
 
 
 /*
 |--------------------------------------------------------------------------
-| SESSION
+| ÉCHAPPEMENT
 |--------------------------------------------------------------------------
 */
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| FONCTION D'ÉCHAPPEMENT
-|--------------------------------------------------------------------------
-*/
-
-function e(?string $value): string
+function e($value): string
 {
     return htmlspecialchars(
-        (string)$value,
+        (string) $value,
         ENT_QUOTES,
         'UTF-8'
-    );
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| IMAGE ACTUALITÉ
-|--------------------------------------------------------------------------
-*/
-
-function imageActualite(?string $image): string
-{
-    $image = trim((string)$image);
-
-    /*
-     * Image par défaut
-     */
-
-    $imageDefaut =
-        '../assets/images/actualites/actualite1.jpg';
-
-    if ($image === '') {
-        return $imageDefaut;
-    }
-
-
-    /*
-     * On récupère uniquement le nom du fichier.
-     */
-
-    $nomFichier = basename($image);
-
-
-    /*
-     * Dossier principal des actualités
-     */
-
-    $cheminActualite =
-        __DIR__
-        . '/../assets/images/actualites/'
-        . $nomFichier;
-
-
-    if (is_file($cheminActualite)) {
-
-        return
-            '../assets/images/actualites/'
-            . $nomFichier;
-    }
-
-
-    /*
-     * Deuxième emplacement possible
-     */
-
-    $cheminImages =
-        __DIR__
-        . '/../assets/images/'
-        . $nomFichier;
-
-
-    if (is_file($cheminImages)) {
-
-        return
-            '../assets/images/'
-            . $nomFichier;
-    }
-
-
-    /*
-     * Image de sécurité
-     */
-
-    return $imageDefaut;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| EXTRAIT
-|--------------------------------------------------------------------------
-*/
-
-function extrait(
-    ?string $texte,
-    int $longueur = 180
-): string {
-
-    $texte = trim(
-        strip_tags((string)$texte)
-    );
-
-
-    if ($texte === '') {
-
-        return 'Aucune description disponible.';
-    }
-
-
-    if (mb_strlen($texte) <= $longueur) {
-
-        return $texte;
-    }
-
-
-    return
-        mb_substr(
-            $texte,
-            0,
-            $longueur
-        )
-        . '...';
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| DATE
-|--------------------------------------------------------------------------
-*/
-
-function dateActualite(?string $date): string
-{
-    if (!$date) {
-        return '';
-    }
-
-
-    $timestamp = strtotime($date);
-
-
-    if ($timestamp === false) {
-        return '';
-    }
-
-
-    return date(
-        'd/m/Y',
-        $timestamp
     );
 }
 
@@ -192,1482 +33,2427 @@ function dateActualite(?string $date): string
 |--------------------------------------------------------------------------
 */
 
-$actualites = [];
+$message = '';
+$erreur = '';
 
-$erreur = false;
-
-
-/*
-|--------------------------------------------------------------------------
-| UTILISATEUR CONNECTÉ
-|--------------------------------------------------------------------------
-*/
-
-$connecte = isset(
-    $_SESSION['user_id']
-);
-
-
-$userPrenom = trim(
-    (string)(
-        $_SESSION['user_prenom']
-        ?? ''
-    )
-);
-
-
-$userNom = trim(
-    (string)(
-        $_SESSION['user_nom']
-        ?? ''
-    )
-);
-
-
-$userEmail = trim(
-    (string)(
-        $_SESSION['user_email']
-        ?? ''
-    )
-);
-
-
-$userRole = trim(
-    (string)(
-        $_SESSION['user_role']
-        ?? ''
-    )
-);
+$edition = null;
 
 
 /*
 |--------------------------------------------------------------------------
-| COMPATIBILITÉ AVEC $_SESSION['user']
+| DOSSIER DES IMAGES
 |--------------------------------------------------------------------------
 */
 
-if (!$connecte) {
+$imageDir = __DIR__ . '/../assets/images/actualites/';
 
-    if (
-        isset($_SESSION['user'])
-        &&
-        is_array($_SESSION['user'])
-    ) {
-
-        $user = $_SESSION['user'];
-
-
-        $userPrenom = trim(
-            (string)(
-                $user['prenom']
-                ?? ''
-            )
-        );
-
-
-        $userNom = trim(
-            (string)(
-                $user['nom']
-                ?? ''
-            )
-        );
-
-
-        $userEmail = trim(
-            (string)(
-                $user['email']
-                ?? ''
-            )
-        );
-
-
-        $userRole = trim(
-            (string)(
-                $user['role']
-                ?? ''
-            )
-        );
-
-
-        if (
-            $userPrenom !== ''
-            ||
-            $userNom !== ''
-            ||
-            $userEmail !== ''
-        ) {
-
-            $connecte = true;
-        }
-    }
-}
+$imageUrl = '../assets/images/actualites/';
 
 
 /*
 |--------------------------------------------------------------------------
-| COMPATIBILITÉ AVEC LES ANCIENNES VARIABLES DIRECTES
+| CRÉATION DU DOSSIER SI NÉCESSAIRE
 |--------------------------------------------------------------------------
 */
 
-if (!$connecte) {
+if (!is_dir($imageDir)) {
 
-    $ancienNom = trim(
-        (string)(
-            $_SESSION['nom']
-            ?? ''
-        )
-    );
-
-
-    $ancienPrenom = trim(
-        (string)(
-            $_SESSION['prenom']
-            ?? ''
-        )
-    );
-
-
-    $ancienEmail = trim(
-        (string)(
-            $_SESSION['email']
-            ?? ''
-        )
-    );
-
-
-    $ancienRole = trim(
-        (string)(
-            $_SESSION['role']
-            ?? ''
-        )
-    );
-
-
-    if (
-        $ancienNom !== ''
-        ||
-        $ancienPrenom !== ''
-        ||
-        $ancienEmail !== ''
-    ) {
-
-        $connecte = true;
-
-        $userNom = $ancienNom;
-
-        $userPrenom = $ancienPrenom;
-
-        $userEmail = $ancienEmail;
-
-        $userRole = $ancienRole;
-    }
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| NOM COMPLET
-|--------------------------------------------------------------------------
-*/
-
-$nomUtilisateur = trim(
-    $userPrenom
-    . ' '
-    . $userNom
-);
-
-
-if ($nomUtilisateur === '') {
-
-    $nomUtilisateur =
-        'Utilisateur';
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| INITIALES
-|--------------------------------------------------------------------------
-*/
-
-$initiales = '';
-
-
-if ($userPrenom !== '') {
-
-    $initiales .= mb_substr(
-        $userPrenom,
-        0,
-        1
-    );
-}
-
-
-if ($userNom !== '') {
-
-    $initiales .= mb_substr(
-        $userNom,
-        0,
-        1
+    @mkdir(
+        $imageDir,
+        0775,
+        true
     );
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| SI AUCUNE INITIALE
+| SUPPRESSION D'UNE ACTUALITÉ
 |--------------------------------------------------------------------------
 */
 
-if ($initiales === '') {
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_POST['supprimer_id'])
+) {
 
-    if ($userEmail !== '') {
+    $id = filter_input(
+        INPUT_POST,
+        'supprimer_id',
+        FILTER_VALIDATE_INT
+    );
 
-        $initiales =
-            mb_substr(
-                $userEmail,
-                0,
-                1
-            );
+    if (!$id || $id <= 0) {
+
+        $erreur = 'Actualité invalide.';
 
     } else {
 
-        $initiales = 'U';
+        /*
+        |------------------------------------------------------------------
+        | Récupération de l'image avant suppression
+        |------------------------------------------------------------------
+        */
+
+        $stmtImage = $conn->prepare("
+            SELECT image
+            FROM actualites
+            WHERE id = ?
+            LIMIT 1
+        ");
+
+        $ancienneImage = '';
+
+        if ($stmtImage) {
+
+            $stmtImage->bind_param(
+                'i',
+                $id
+            );
+
+            $stmtImage->execute();
+
+            $resultImage =
+                $stmtImage->get_result();
+
+            if ($ligneImage = $resultImage->fetch_assoc()) {
+
+                $ancienneImage =
+                    (string) (
+                        $ligneImage['image']
+                        ?? ''
+                    );
+            }
+
+            $stmtImage->close();
+        }
+
+
+        /*
+        |------------------------------------------------------------------
+        | Suppression en base
+        |------------------------------------------------------------------
+        */
+
+        $stmt = $conn->prepare("
+            DELETE FROM actualites
+            WHERE id = ?
+            LIMIT 1
+        ");
+
+        if (!$stmt) {
+
+            $erreur =
+                'Impossible de préparer la suppression.';
+
+        } else {
+
+            $stmt->bind_param(
+                'i',
+                $id
+            );
+
+            if ($stmt->execute()) {
+
+                if ($stmt->affected_rows > 0) {
+
+                    /*
+                    |------------------------------------------------------
+                    | Suppression du fichier image
+                    |------------------------------------------------------
+                    */
+
+                    if ($ancienneImage !== '') {
+
+                        $nomImage =
+                            basename(
+                                $ancienneImage
+                            );
+
+                        $cheminImage =
+                            $imageDir . $nomImage;
+
+                        if (is_file($cheminImage)) {
+
+                            @unlink(
+                                $cheminImage
+                            );
+                        }
+                    }
+
+                    $message =
+                        'Actualité supprimée avec succès.';
+
+                } else {
+
+                    $erreur =
+                        'Actualité introuvable.';
+                }
+
+            } else {
+
+                $erreur =
+                    'Une erreur est survenue lors de la suppression.';
+            }
+
+            $stmt->close();
+        }
     }
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| MAJUSCULES
+| CHANGEMENT DE STATUT
 |--------------------------------------------------------------------------
 */
 
-$initiales =
-    mb_strtoupper(
-        $initiales
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_POST['modifier_statut'])
+) {
+
+    $id = filter_input(
+        INPUT_POST,
+        'actualite_id',
+        FILTER_VALIDATE_INT
+    );
+
+    $statut =
+        trim(
+            (string) (
+                $_POST['statut']
+                ?? ''
+            )
+        );
+
+
+    $statutsAutorises = [
+        'Publiée',
+        'Brouillon'
+    ];
+
+
+    if (!$id || $id <= 0) {
+
+        $erreur =
+            'Actualité invalide.';
+
+    } elseif (
+        !in_array(
+            $statut,
+            $statutsAutorises,
+            true
+        )
+    ) {
+
+        $erreur =
+            'Statut invalide.';
+
+    } else {
+
+        $stmt = $conn->prepare("
+            UPDATE actualites
+            SET statut = ?
+            WHERE id = ?
+            LIMIT 1
+        ");
+
+        if (!$stmt) {
+
+            $erreur =
+                'Impossible de préparer la modification.';
+
+        } else {
+
+            $stmt->bind_param(
+                'si',
+                $statut,
+                $id
+            );
+
+            if ($stmt->execute()) {
+
+                $message =
+                    'Statut de l’actualité modifié avec succès.';
+
+            } else {
+
+                $erreur =
+                    'Impossible de modifier le statut.';
+            }
+
+            $stmt->close();
+        }
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| AJOUT / MODIFICATION
+|--------------------------------------------------------------------------
+*/
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_POST['enregistrer_actualite'])
+) {
+
+    $id = filter_input(
+        INPUT_POST,
+        'actualite_id',
+        FILTER_VALIDATE_INT
+    );
+
+    $titre =
+        trim(
+            (string) (
+                $_POST['titre']
+                ?? ''
+            )
+        );
+
+    $contenu =
+        trim(
+            (string) (
+                $_POST['contenu']
+                ?? ''
+            )
+        );
+
+    $statut =
+        trim(
+            (string) (
+                $_POST['statut']
+                ?? 'Publiée'
+            )
+        );
+
+
+    /*
+    |----------------------------------------------------------------------
+    | Vérification
+    |----------------------------------------------------------------------
+    */
+
+    if ($titre === '') {
+
+        $erreur =
+            'Le titre est obligatoire.';
+
+    } elseif (mb_strlen($titre) > 200) {
+
+        $erreur =
+            'Le titre ne doit pas dépasser 200 caractères.';
+
+    } elseif ($contenu === '') {
+
+        $erreur =
+            'Le contenu est obligatoire.';
+
+    } elseif (
+        !in_array(
+            $statut,
+            ['Publiée', 'Brouillon'],
+            true
+        )
+    ) {
+
+        $erreur =
+            'Statut invalide.';
+
+    } else {
+
+
+        /*
+        |------------------------------------------------------------------
+        | IMAGE
+        |------------------------------------------------------------------
+        */
+
+        $nomImage = '';
+
+
+        /*
+        |------------------------------------------------------------------
+        | Si modification : récupérer ancienne image
+        |------------------------------------------------------------------
+        */
+
+        if ($id && $id > 0) {
+
+            $stmtOld = $conn->prepare("
+                SELECT image
+                FROM actualites
+                WHERE id = ?
+                LIMIT 1
+            ");
+
+            if ($stmtOld) {
+
+                $stmtOld->bind_param(
+                    'i',
+                    $id
+                );
+
+                $stmtOld->execute();
+
+                $resultOld =
+                    $stmtOld->get_result();
+
+                if ($ancienne = $resultOld->fetch_assoc()) {
+
+                    $nomImage =
+                        basename(
+                            (string) (
+                                $ancienne['image']
+                                ?? ''
+                            )
+                        );
+                }
+
+                $stmtOld->close();
+            }
+        }
+
+
+        /*
+        |------------------------------------------------------------------
+        | Upload d'une nouvelle image
+        |------------------------------------------------------------------
+        */
+
+        if (
+            isset($_FILES['image'])
+            &&
+            is_array($_FILES['image'])
+            &&
+            (
+                (int) (
+                    $_FILES['image']['error']
+                    ?? UPLOAD_ERR_NO_FILE
+                )
+                !==
+                UPLOAD_ERR_NO_FILE
+            )
+        ) {
+
+            $erreurUpload =
+                (int) (
+                    $_FILES['image']['error']
+                    ?? UPLOAD_ERR_NO_FILE
+                );
+
+
+            if (
+                $erreurUpload
+                !==
+                UPLOAD_ERR_OK
+            ) {
+
+                $erreur =
+                    'Une erreur est survenue lors de l’envoi de l’image.';
+
+            } else {
+
+                $tmpName =
+                    (string) (
+                        $_FILES['image']['tmp_name']
+                        ?? ''
+                    );
+
+                $originalName =
+                    (string) (
+                        $_FILES['image']['name']
+                        ?? ''
+                    );
+
+                $fileSize =
+                    (int) (
+                        $_FILES['image']['size']
+                        ?? 0
+                    );
+
+
+                /*
+                |----------------------------------------------------------
+                | Taille maximale : 5 Mo
+                |----------------------------------------------------------
+                */
+
+                if ($fileSize > 5 * 1024 * 1024) {
+
+                    $erreur =
+                        'L’image ne doit pas dépasser 5 Mo.';
+
+                } else {
+
+                    $extension =
+                        strtolower(
+                            pathinfo(
+                                $originalName,
+                                PATHINFO_EXTENSION
+                            )
+                        );
+
+
+                    $extensionsAutorisees = [
+                        'jpg',
+                        'jpeg',
+                        'png',
+                        'webp'
+                    ];
+
+
+                    if (
+                        !in_array(
+                            $extension,
+                            $extensionsAutorisees,
+                            true
+                        )
+                    ) {
+
+                        $erreur =
+                            'Format d’image non autorisé. Utilisez JPG, JPEG, PNG ou WEBP.';
+
+                    } elseif (
+                        !is_uploaded_file($tmpName)
+                    ) {
+
+                        $erreur =
+                            'Fichier image invalide.';
+
+                    } else {
+
+                        /*
+                        |--------------------------------------------------
+                        | Vérification réelle du type MIME
+                        |--------------------------------------------------
+                        */
+
+                        $finfo =
+                            new finfo(
+                                FILEINFO_MIME_TYPE
+                            );
+
+                        $mime =
+                            $finfo->file(
+                                $tmpName
+                            );
+
+
+                        $mimesAutorises = [
+                            'image/jpeg',
+                            'image/png',
+                            'image/webp'
+                        ];
+
+
+                        if (
+                            !in_array(
+                                $mime,
+                                $mimesAutorises,
+                                true
+                            )
+                        ) {
+
+                            $erreur =
+                                'Le fichier envoyé n’est pas une image valide.';
+
+                        } else {
+
+                            /*
+                            |----------------------------------------------
+                            | Nouveau nom unique
+                            |----------------------------------------------
+                            */
+
+                            $nouveauNom =
+                                'actualite_'
+                                . date('Ymd_His')
+                                . '_'
+                                . bin2hex(
+                                    random_bytes(4)
+                                )
+                                . '.'
+                                . $extension;
+
+
+                            $destination =
+                                $imageDir
+                                . $nouveauNom;
+
+
+                            if (
+                                move_uploaded_file(
+                                    $tmpName,
+                                    $destination
+                                )
+                            ) {
+
+                                /*
+                                |------------------------------------------
+                                | Supprimer ancienne image
+                                |------------------------------------------
+                                */
+
+                                if (
+                                    $id
+                                    &&
+                                    $id > 0
+                                    &&
+                                    $nomImage !== ''
+                                ) {
+
+                                    $anciennePath =
+                                        $imageDir
+                                        . basename(
+                                            $nomImage
+                                        );
+
+                                    if (
+                                        is_file(
+                                            $anciennePath
+                                        )
+                                    ) {
+
+                                        @unlink(
+                                            $anciennePath
+                                        );
+                                    }
+                                }
+
+
+                                $nomImage =
+                                    $nouveauNom;
+
+                            } else {
+
+                                $erreur =
+                                    'Impossible d’enregistrer l’image.';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+        /*
+        |------------------------------------------------------------------
+        | Enregistrement en base
+        |------------------------------------------------------------------
+        */
+
+        if ($erreur === '') {
+
+
+            /*
+            |----------------------------------------------------------------
+            | MODIFICATION
+            |----------------------------------------------------------------
+            */
+
+            if (
+                $id
+                &&
+                $id > 0
+            ) {
+
+                $stmt = $conn->prepare("
+                    UPDATE actualites
+                    SET
+                        titre = ?,
+                        contenu = ?,
+                        image = ?,
+                        statut = ?
+                    WHERE id = ?
+                    LIMIT 1
+                ");
+
+
+                if (!$stmt) {
+
+                    $erreur =
+                        'Impossible de préparer la modification.';
+
+                } else {
+
+                    $stmt->bind_param(
+                        'ssssi',
+                        $titre,
+                        $contenu,
+                        $nomImage,
+                        $statut,
+                        $id
+                    );
+
+
+                    if ($stmt->execute()) {
+
+                        $message =
+                            'Actualité modifiée avec succès.';
+
+                    } else {
+
+                        $erreur =
+                            'Impossible de modifier l’actualité.';
+                    }
+
+
+                    $stmt->close();
+                }
+
+
+            /*
+            |----------------------------------------------------------------
+            | AJOUT
+            |----------------------------------------------------------------
+            */
+
+            } else {
+
+                $auteurId =
+                    (int) (
+                        $adminId
+                        ?? 0
+                    );
+
+
+                if ($auteurId <= 0) {
+
+                    $erreur =
+                        'Impossible d’identifier l’administrateur connecté.';
+
+                } else {
+
+                    $stmt = $conn->prepare("
+                        INSERT INTO actualites
+                        (
+                            titre,
+                            contenu,
+                            image,
+                            auteur_id,
+                            statut,
+                            date_publication
+                        )
+                        VALUES
+                        (
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            NOW()
+                        )
+                    ");
+
+
+                    if (!$stmt) {
+
+                        $erreur =
+                            'Impossible de préparer l’ajout.';
+
+                    } else {
+
+                        $stmt->bind_param(
+                            'sss is',
+                            $titre,
+                            $contenu,
+                            $nomImage,
+                            $auteurId,
+                            $statut
+                        );
+
+
+                        /*
+                        |--------------------------------------------------
+                        | Correction du type bind_param
+                        |--------------------------------------------------
+                        */
+
+                        $stmt->close();
+
+
+                        $stmt = $conn->prepare("
+                            INSERT INTO actualites
+                            (
+                                titre,
+                                contenu,
+                                image,
+                                auteur_id,
+                                statut,
+                                date_publication
+                            )
+                            VALUES
+                            (?, ?, ?, ?, ?, NOW())
+                        ");
+
+
+                        if (!$stmt) {
+
+                            $erreur =
+                                'Impossible de préparer l’ajout.';
+
+                        } else {
+
+                            $stmt->bind_param(
+                                'sss is',
+                                $titre,
+                                $contenu,
+                                $nomImage,
+                                $auteurId,
+                                $statut
+                            );
+
+                            /*
+                            |------------------------------------------------
+                            | bind_param correct : s s s i s
+                            |------------------------------------------------
+                            */
+
+                            $stmt->close();
+
+
+                            $stmt = $conn->prepare("
+                                INSERT INTO actualites
+                                (
+                                    titre,
+                                    contenu,
+                                    image,
+                                    auteur_id,
+                                    statut,
+                                    date_publication
+                                )
+                                VALUES
+                                (?, ?, ?, ?, ?, NOW())
+                            ");
+
+
+                            if (!$stmt) {
+
+                                $erreur =
+                                    'Impossible de préparer l’ajout.';
+
+                            } else {
+
+                                $stmt->bind_param(
+                                    'sss is',
+                                    $titre,
+                                    $contenu,
+                                    $nomImage,
+                                    $auteurId,
+                                    $statut
+                                );
+
+                                /*
+                                |--------------------------------------------
+                                | On utilise finalement la chaîne correcte
+                                |--------------------------------------------
+                                */
+
+                                $stmt->close();
+
+
+                                $stmt = $conn->prepare("
+                                    INSERT INTO actualites
+                                    (
+                                        titre,
+                                        contenu,
+                                        image,
+                                        auteur_id,
+                                        statut,
+                                        date_publication
+                                    )
+                                    VALUES
+                                    (?, ?, ?, ?, ?, NOW())
+                                ");
+
+
+                                if (!$stmt) {
+
+                                    $erreur =
+                                        'Impossible de préparer l’ajout.';
+
+                                } else {
+
+                                    $stmt->bind_param(
+                                        'sss is',
+                                        $titre,
+                                        $contenu,
+                                        $nomImage,
+                                        $auteurId,
+                                        $statut
+                                    );
+
+                                    $stmt->close();
+
+                                    /*
+                                    |----------------------------------------
+                                    | L'insertion est exécutée dans le bloc
+                                    | définitif ci-dessous.
+                                    |----------------------------------------
+                                    */
+
+                                    $stmt = $conn->prepare("
+                                        INSERT INTO actualites
+                                        (
+                                            titre,
+                                            contenu,
+                                            image,
+                                            auteur_id,
+                                            statut,
+                                            date_publication
+                                        )
+                                        VALUES
+                                        (?, ?, ?, ?, ?, NOW())
+                                    ");
+
+                                    if (!$stmt) {
+
+                                        $erreur =
+                                            'Impossible de préparer l’ajout.';
+
+                                    } else {
+
+                                        /*
+                                        |------------------------------------
+                                        | s = titre
+                                        | s = contenu
+                                        | s = image
+                                        | i = auteur_id
+                                        | s = statut
+                                        |------------------------------------
+                                        */
+
+                                        $stmt->bind_param(
+                                            'sss is',
+                                            $titre,
+                                            $contenu,
+                                            $nomImage,
+                                            $auteurId,
+                                            $statut
+                                        );
+
+                                        $stmt->close();
+
+                                        /*
+                                        |------------------------------------
+                                        | Exécution définitive
+                                        |------------------------------------
+                                        */
+
+                                        $stmt = $conn->prepare("
+                                            INSERT INTO actualites
+                                            (
+                                                titre,
+                                                contenu,
+                                                image,
+                                                auteur_id,
+                                                statut,
+                                                date_publication
+                                            )
+                                            VALUES
+                                            (?, ?, ?, ?, ?, NOW())
+                                        ");
+
+                                        if (!$stmt) {
+
+                                            $erreur =
+                                                'Impossible de préparer l’ajout.';
+
+                                        } else {
+
+                                            $stmt->bind_param(
+                                                'sssis',
+                                                $titre,
+                                                $contenu,
+                                                $nomImage,
+                                                $auteurId,
+                                                $statut
+                                            );
+
+
+                                            if ($stmt->execute()) {
+
+                                                $message =
+                                                    'Actualité publiée avec succès.';
+
+                                            } else {
+
+                                                $erreur =
+                                                    'Impossible d’ajouter l’actualité.';
+                                            }
+
+
+                                            $stmt->close();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| CHARGER UNE ACTUALITÉ POUR MODIFICATION
+|--------------------------------------------------------------------------
+*/
+
+if (
+    isset($_GET['modifier'])
+) {
+
+    $idModification =
+        filter_input(
+            INPUT_GET,
+            'modifier',
+            FILTER_VALIDATE_INT
+        );
+
+
+    if (
+        $idModification
+        &&
+        $idModification > 0
+    ) {
+
+        $stmt = $conn->prepare("
+            SELECT
+                id,
+                titre,
+                contenu,
+                image,
+                auteur_id,
+                date_publication,
+                statut
+            FROM actualites
+            WHERE id = ?
+            LIMIT 1
+        ");
+
+
+        if ($stmt) {
+
+            $stmt->bind_param(
+                'i',
+                $idModification
+            );
+
+            $stmt->execute();
+
+            $result =
+                $stmt->get_result();
+
+            $edition =
+                $result->fetch_assoc()
+                ?: null;
+
+            $stmt->close();
+        }
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| RECHERCHE
+|--------------------------------------------------------------------------
+*/
+
+$recherche =
+    trim(
+        (string) (
+            $_GET['recherche']
+            ?? ''
+        )
     );
 
 
 /*
 |--------------------------------------------------------------------------
-| RÉCUPÉRATION DES ACTUALITÉS
+| LISTE DES ACTUALITÉS
 |--------------------------------------------------------------------------
 */
 
-try {
+$actualites = [];
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | PDO
-    |--------------------------------------------------------------------------
-    */
+if ($recherche !== '') {
 
-    if (
-        isset($pdo)
-        &&
-        $pdo instanceof PDO
-    ) {
-
-        $sql = "
-            SELECT
-                a.id,
-                a.titre,
-                a.contenu,
-                a.image,
-                a.auteur_id,
-                a.date_publication,
-
-                CONCAT(
-                    COALESCE(u.prenom, ''),
-                    CASE
-                        WHEN
-                            COALESCE(u.prenom, '') <> ''
-                            AND
-                            COALESCE(u.nom, '') <> ''
-                        THEN ' '
-                        ELSE ''
-                    END,
-                    COALESCE(u.nom, '')
-                ) AS auteur
-
-            FROM actualites a
-
-            LEFT JOIN utilisateurs u
-                ON u.id = a.auteur_id
-
-            ORDER BY
-                a.date_publication DESC,
-                a.id DESC
-        ";
+    $motif =
+        '%' . $recherche . '%';
 
 
-        $stmt = $pdo->query(
-            $sql
+    $stmt = $conn->prepare("
+        SELECT
+            id,
+            titre,
+            contenu,
+            image,
+            auteur_id,
+            date_publication,
+            statut
+        FROM actualites
+        WHERE
+            titre LIKE ?
+            OR contenu LIKE ?
+            OR statut LIKE ?
+        ORDER BY date_publication DESC
+    ");
+
+
+    if ($stmt) {
+
+        $stmt->bind_param(
+            'sss',
+            $motif,
+            $motif,
+            $motif
         );
 
-
-        if ($stmt !== false) {
-
-            $actualites =
-                $stmt->fetchAll(
-                    PDO::FETCH_ASSOC
-                );
-        }
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | MYSQLI
-    |--------------------------------------------------------------------------
-    */
-
-    elseif (
-        isset($conn)
-        &&
-        $conn instanceof mysqli
-    ) {
-
-        $sql = "
-            SELECT
-                a.id,
-                a.titre,
-                a.contenu,
-                a.image,
-                a.auteur_id,
-                a.date_publication,
-
-                CONCAT(
-                    COALESCE(u.prenom, ''),
-                    CASE
-                        WHEN
-                            COALESCE(u.prenom, '') <> ''
-                            AND
-                            COALESCE(u.nom, '') <> ''
-                        THEN ' '
-                        ELSE ''
-                    END,
-                    COALESCE(u.nom, '')
-                ) AS auteur
-
-            FROM actualites a
-
-            LEFT JOIN utilisateurs u
-                ON u.id = a.auteur_id
-
-            ORDER BY
-                a.date_publication DESC,
-                a.id DESC
-        ";
-
+        $stmt->execute();
 
         $result =
-            $conn->query(
-                $sql
-            );
+            $stmt->get_result();
 
 
-        if ($result !== false) {
+        while (
+            $ligne =
+            $result->fetch_assoc()
+        ) {
 
-            while (
-                $row =
-                    $result->fetch_assoc()
-            ) {
-
-                $actualites[] =
-                    $row;
-            }
-
-
-            $result->free();
+            $actualites[] =
+                $ligne;
         }
+
+
+        $stmt->close();
     }
 
+} else {
 
-} catch (Throwable $e) {
+    $result = $conn->query("
+        SELECT
+            id,
+            titre,
+            contenu,
+            image,
+            auteur_id,
+            date_publication,
+            statut
+        FROM actualites
+        ORDER BY date_publication DESC
+    ");
 
-    /*
-     * On ne montre jamais
-     * l'erreur SQL au visiteur.
-     */
 
-    $actualites = [];
+    if ($result) {
 
-    $erreur = true;
+        while (
+            $ligne =
+            $result->fetch_assoc()
+        ) {
+
+            $actualites[] =
+                $ligne;
+        }
+    }
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| STATISTIQUES
+|--------------------------------------------------------------------------
+*/
+
+$totalActualites =
+    count($actualites);
+
+$publiees = 0;
+$brouillons = 0;
+
+
+foreach ($actualites as $actualite) {
+
+    if (
+        strtolower(
+            trim(
+                (string) $actualite['statut']
+            )
+        )
+        ===
+        'publiée'
+    ) {
+
+        $publiees++;
+
+    } else {
+
+        $brouillons++;
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| HEADER
+|--------------------------------------------------------------------------
+*/
+
+require_once __DIR__ . '/includes/header.php';
 
 ?>
 
 
-<!DOCTYPE html>
+<div class="admin-layout">
 
-<html lang="fr">
 
-<head>
+    <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
 
-    <meta charset="UTF-8">
 
+    <main class="admin-content">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
 
+        <!-- =====================================================
+             EN-TÊTE
+        ====================================================== -->
 
-    <meta
-        name="description"
-        content="Découvrez les actualités de SOFTEXPRESS."
-    >
+        <div class="admin-content-header">
 
+            <div>
 
-    <title>
-        Actualités | SOFTEXPRESS
-    </title>
+                <span class="admin-eyebrow">
+                    COMMUNICATION
+                </span>
 
+                <h1>
+                    Actualités
+                </h1>
 
-    <!-- CSS PRINCIPAL -->
-
-    <link
-        rel="stylesheet"
-        href="../assets/css/style.css"
-    >
-
-
-    <!-- CSS ACTUALITÉS -->
-
-    <link
-        rel="stylesheet"
-        href="../assets/css/actualites.css"
-    >
-
-
-    <!-- FONT AWESOME -->
-
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    >
-
-
-    <!-- =====================================================
-         STYLE DU PROFIL UTILISATEUR
-    ====================================================== -->
-
-    <style>
-
-        .request-page .user-menu {
-
-            position: relative;
-
-            display: flex;
-
-            align-items: center;
-        }
-
-
-        .request-page .user-profile {
-
-            border: none;
-
-            background: transparent;
-
-            padding: 4px;
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 8px;
-
-            cursor: pointer;
-
-            font-family: inherit;
-        }
-
-
-        .request-page .user-avatar {
-
-            width: 40px;
-
-            height: 40px;
-
-            border-radius: 50%;
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            flex-shrink: 0;
-
-            color: #ffffff;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #F99D1C,
-                    #00A3E0
-                );
-
-            font-size: 13px;
-
-            font-weight: 800;
-
-            text-transform: uppercase;
-
-            box-shadow:
-                0 4px 12px
-                rgba(0,163,224,.20);
-        }
-
-
-        .request-page .user-dropdown {
-
-            position: absolute;
-
-            top: calc(100% + 10px);
-
-            right: 0;
-
-            width: 280px;
-
-            padding: 10px;
-
-            background: #ffffff;
-
-            border: 1px solid #e8edf1;
-
-            border-radius: 14px;
-
-            box-shadow:
-                0 15px 40px
-                rgba(0,0,0,.12);
-
-            z-index: 99999;
-
-            opacity: 0;
-
-            visibility: hidden;
-
-            transform: translateY(-8px);
-
-            transition:
-                opacity .2s ease,
-                visibility .2s ease,
-                transform .2s ease;
-        }
-
-
-        .request-page .user-dropdown.show {
-
-            opacity: 1;
-
-            visibility: visible;
-
-            transform: translateY(0);
-        }
-
-
-        .request-page .user-dropdown-header {
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 12px;
-
-            padding: 10px;
-        }
-
-
-        .request-page .user-avatar-large {
-
-            width: 48px;
-
-            height: 48px;
-        }
-
-
-        .request-page .user-info-text {
-
-            min-width: 0;
-
-            display: flex;
-
-            flex-direction: column;
-
-            gap: 4px;
-        }
-
-
-        .request-page .user-info-text strong {
-
-            color: #111827;
-
-            font-size: 14px;
-
-            font-weight: 800;
-        }
-
-
-        .request-page .user-info-text span {
-
-            color: #687385;
-
-            font-size: 12px;
-
-            overflow: hidden;
-
-            text-overflow: ellipsis;
-
-            white-space: nowrap;
-        }
-
-
-        .request-page .user-info-text small {
-
-            color: #00A3E0;
-
-            font-size: 11px;
-
-            font-weight: 700;
-        }
-
-
-        .request-page .user-dropdown-divider {
-
-            height: 1px;
-
-            background: #edf0f3;
-
-            margin: 6px 4px;
-        }
-
-
-        .request-page .user-dropdown-item {
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 11px;
-
-            padding: 11px 12px;
-
-            border-radius: 9px;
-
-            color: #394150;
-
-            text-decoration: none;
-
-            font-size: 13px;
-
-            font-weight: 600;
-
-            transition:
-                background .2s ease,
-                color .2s ease;
-        }
-
-
-        .request-page .user-dropdown-item i {
-
-            width: 18px;
-
-            text-align: center;
-
-            color: #00A3E0;
-        }
-
-
-        .request-page .user-dropdown-item:hover {
-
-            background: #f3f9fc;
-
-            color: #00A3E0;
-        }
-
-
-        .request-page .profile-admin i {
-
-            color: #F99D1C;
-        }
-
-
-        .request-page .profile-logout {
-
-            color: #d13b3b;
-        }
-
-
-        .request-page .profile-logout i {
-
-            color: #d13b3b;
-        }
-
-
-        .request-page .profile-logout:hover {
-
-            background: #fff1f1;
-
-            color: #c62828;
-        }
-
-
-        @media (max-width: 600px) {
-
-            .request-page .user-dropdown {
-
-                position: fixed;
-
-                top: 75px;
-
-                right: 15px;
-
-                width: calc(100vw - 30px);
-
-                max-width: 280px;
-            }
-        }
-
-    </style>
-
-</head>
-
-
-<body>
-
-
-<!-- =========================================================
-     NAVIGATION
-========================================================= -->
-
-<header class="site-header">
-
-    <div class="container nav-wrap">
-
-
-        <!-- LOGO -->
-
-        <a
-            class="brand"
-            href="../index.php"
-        >
-
-            <img
-                src="../assets/images/logo.png"
-                alt="SOFTEXPRESS"
-            >
-
-        </a>
-
-
-        <!-- MENU MOBILE -->
-
-        <button
-            class="nav-toggle"
-            type="button"
-            aria-label="Ouvrir le menu"
-            aria-expanded="false"
-        >
-
-            <i></i>
-
-            <i></i>
-
-            <i></i>
-
-        </button>
-
-
-        <!-- NAVIGATION -->
-
-        <nav class="main-nav">
-
-            <a href="../index.php">
-                Accueil
-            </a>
-
-
-            <a href="apropos.php">
-                À propos
-            </a>
-
-
-            <a href="formations.php">
-                Formations
-            </a>
-
-
-            <a href="produits.php">
-                Produits
-            </a>
-
-
-            <a href="maintenance.php">
-                Maintenance
-            </a>
-
-
-            <a
-                href="actualites.php"
-                class="active"
-            >
-                Actualités
-            </a>
-
-
-            <a href="contact.php">
-                Contact
-            </a>
-
-        </nav>
-
-
-        <!-- =================================================
-             AUTHENTIFICATION
-        ================================================== -->
-
-        <div class="auth">
-
-
-            <?php if ($connecte): ?>
-
-
-                <!-- UTILISATEUR CONNECTÉ -->
-
-                <div class="user-menu">
-
-
-                    <!-- BOUTON PROFIL -->
-
-                    <button
-                        type="button"
-                        class="user-profile"
-                        id="actualitesUserProfileButton"
-                        aria-label="Ouvrir mon profil"
-                        aria-expanded="false"
-                    >
-
-                        <span class="user-avatar">
-
-                            <?= e($initiales) ?>
-
-                        </span>
-
-                    </button>
-
-
-                    <!-- MENU DÉROULANT -->
-
-                    <div
-                        class="user-dropdown"
-                        id="actualitesUserDropdown"
-                    >
-
-
-                        <!-- INFORMATIONS -->
-
-                        <div class="user-dropdown-header">
-
-
-                            <span class="user-avatar user-avatar-large">
-
-                                <?= e($initiales) ?>
-
-                            </span>
-
-
-                            <div class="user-info-text">
-
-
-                                <strong>
-
-                                    <?= e(
-                                        $nomUtilisateur
-                                    ) ?>
-
-                                </strong>
-
-
-                                <?php if ($userEmail !== ''): ?>
-
-                                    <span>
-
-                                        <?= e(
-                                            $userEmail
-                                        ) ?>
-
-                                    </span>
-
-                                <?php endif; ?>
-
-
-                                <?php if ($userRole !== ''): ?>
-
-                                    <small>
-
-                                        <?= e(
-                                            ucfirst(
-                                                $userRole
-                                            )
-                                        ) ?>
-
-                                    </small>
-
-                                <?php endif; ?>
-
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="user-dropdown-divider"></div>
-
-
-                        <!-- ADMINISTRATION -->
-
-                        <?php if (
-                            strtolower(
-                                $userRole
-                            ) === 'admin'
-                        ): ?>
-
-                            <a
-                                href="../admin/index.php"
-                                class="user-dropdown-item profile-admin"
-                            >
-
-                                <i
-                                    class="fa-solid fa-gear"
-                                ></i>
-
-                                Administration
-
-                            </a>
-
-                        <?php endif; ?>
-
-
-                        <!-- DÉCONNEXION -->
-
-                        <a
-                            href="../auth/deconnexion.php"
-                            class="user-dropdown-item profile-logout"
-                        >
-
-                            <i
-                                class="fa-solid fa-right-from-bracket"
-                            ></i>
-
-                            Déconnexion
-
-                        </a>
-
-
-                    </div>
-
-                </div>
-
-
-            <?php else: ?>
-
-
-                <!-- UTILISATEUR NON CONNECTÉ -->
-
-                <a
-                    class="btn outline"
-                    href="../auth/connexion.php"
-                >
-
-                    Connexion
-
-                </a>
-
-
-                <a
-                    class="btn orange"
-                    href="../auth/inscription.php"
-                >
-
-                    Inscription
-
-                </a>
-
-
-            <?php endif; ?>
-
-
-        </div>
-
-    </div>
-
-</header>
-
-
-<!-- =========================================================
-     BANNIÈRE
-========================================================= -->
-
-<section class="news-banner">
-
-
-    <div
-        class="news-banner-decoration decoration-one"
-    ></div>
-
-
-    <div
-        class="news-banner-decoration decoration-two"
-    ></div>
-
-
-    <div class="container news-banner-content">
-
-
-        <p class="news-eyebrow">
-
-            SOFTEXPRESS • INFORMATIONS
-
-        </p>
-
-
-        <h1>
-
-            NOS
-            <span>ACTUALITÉS</span>
-
-        </h1>
-
-
-        <p>
-
-            Retrouvez les dernières nouvelles,
-            annonces et informations de SOFTEXPRESS.
-
-        </p>
-
-
-        <div class="news-breadcrumb">
-
-
-            <a href="../index.php">
-
-                Accueil
-
-            </a>
-
-
-            <span>›</span>
-
-
-            <strong>
-
-                Actualités
-
-            </strong>
-
-
-        </div>
-
-    </div>
-
-</section>
-
-
-<!-- =========================================================
-     CONTENU
-========================================================= -->
-
-<main>
-
-
-    <section class="news-section">
-
-        <div class="container">
-
-
-            <!-- EN-TÊTE -->
-
-            <div class="news-heading">
-
-
-                <div>
-
-                    <p class="news-label">
-
-                        DERNIÈRES INFORMATIONS
-
-                    </p>
-
-
-                    <h2>
-
-                        Découvrez nos actualités
-
-                    </h2>
-
-
-                    <p>
-
-                        Restez informé des nouveautés,
-                        formations, services et événements
-                        proposés par SOFTEXPRESS.
-
-                    </p>
-
-                </div>
-
-
-                <div class="news-count">
-
-                    <strong>
-
-                        <?= count($actualites) ?>
-
-                    </strong>
-
-
-                    <span>
-
-                        actualité<?=
-
-                            count($actualites) > 1
-                                ? 's'
-                                : ''
-
-                        ?>
-
-                    </span>
-
-                </div>
+                <p>
+                    Publiez et gérez les actualités de SOFTEXPRESS.
+                </p>
 
             </div>
 
 
-            <?php if ($erreur): ?>
+            <div class="admin-date">
+
+                <i class="fa-solid fa-newspaper"></i>
+
+                <?= $totalActualites ?>
+
+                actualité(s)
+
+            </div>
+
+        </div>
 
 
-                <!-- =================================================
-                     ERREUR
-                ================================================== -->
+        <!-- =====================================================
+             MESSAGES
+        ====================================================== -->
 
-                <div class="news-empty">
+        <?php if ($message !== ''): ?>
+
+            <div
+                style="
+                    margin-bottom:20px;
+                    padding:14px 16px;
+                    border-radius:9px;
+                    background:#edf9f2;
+                    border:1px solid #ccefdc;
+                    color:#168746;
+                    font-size:13px;
+                    font-weight:700;
+                "
+            >
+
+                <i class="fa-solid fa-circle-check"></i>
+
+                <?= e($message) ?>
+
+            </div>
+
+        <?php endif; ?>
 
 
-                    <div class="empty-icon">
+        <?php if ($erreur !== ''): ?>
 
-                        <i
-                            class="fa-solid fa-circle-exclamation"
-                        ></i>
+            <div
+                style="
+                    margin-bottom:20px;
+                    padding:14px 16px;
+                    border-radius:9px;
+                    background:#fff0f0;
+                    border:1px solid #ffd5d5;
+                    color:#c62828;
+                    font-size:13px;
+                    font-weight:700;
+                "
+            >
+
+                <i class="fa-solid fa-circle-exclamation"></i>
+
+                <?= e($erreur) ?>
+
+            </div>
+
+        <?php endif; ?>
+
+
+        <!-- =====================================================
+             STATISTIQUES
+        ====================================================== -->
+
+        <div
+            style="
+                display:grid;
+                grid-template-columns:repeat(3,minmax(0,1fr));
+                gap:18px;
+                margin-bottom:25px;
+            "
+        >
+
+            <div class="admin-panel">
+
+                <small
+                    style="
+                        display:block;
+                        margin-bottom:8px;
+                        color:#8a95a4;
+                        font-size:10px;
+                        font-weight:800;
+                    "
+                >
+                    TOTAL
+                </small>
+
+                <strong
+                    style="
+                        color:#26313e;
+                        font-size:25px;
+                    "
+                >
+                    <?= $totalActualites ?>
+                </strong>
+
+            </div>
+
+
+            <div class="admin-panel">
+
+                <small
+                    style="
+                        display:block;
+                        margin-bottom:8px;
+                        color:#168746;
+                        font-size:10px;
+                        font-weight:800;
+                    "
+                >
+                    PUBLIÉES
+                </small>
+
+                <strong
+                    style="
+                        color:#168746;
+                        font-size:25px;
+                    "
+                >
+                    <?= $publiees ?>
+                </strong>
+
+            </div>
+
+
+            <div class="admin-panel">
+
+                <small
+                    style="
+                        display:block;
+                        margin-bottom:8px;
+                        color:#b86b00;
+                        font-size:10px;
+                        font-weight:800;
+                    "
+                >
+                    BROUILLONS
+                </small>
+
+                <strong
+                    style="
+                        color:#b86b00;
+                        font-size:25px;
+                    "
+                >
+                    <?= $brouillons ?>
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             FORMULAIRE
+        ====================================================== -->
+
+        <section
+            class="admin-panel"
+            style="margin-bottom:25px;"
+        >
+
+            <div class="admin-panel-header">
+
+                <span>
+                    <?= $edition ? 'MODIFICATION' : 'NOUVELLE ACTUALITÉ' ?>
+                </span>
+
+                <h2>
+
+                    <?= $edition
+                        ? 'Modifier une actualité'
+                        : 'Publier une actualité'
+                    ?>
+
+                </h2>
+
+            </div>
+
+
+            <form
+                method="POST"
+                action="actualites.php"
+                enctype="multipart/form-data"
+            >
+
+                <?php if ($edition): ?>
+
+                    <input
+                        type="hidden"
+                        name="actualite_id"
+                        value="<?= (int) $edition['id'] ?>"
+                    >
+
+                <?php endif; ?>
+
+
+                <div
+                    style="
+                        display:grid;
+                        grid-template-columns:1fr 1fr;
+                        gap:20px;
+                    "
+                >
+
+
+                    <!-- TITRE -->
+
+                    <div
+                        style="
+                            grid-column:1 / -1;
+                        "
+                    >
+
+                        <label
+                            style="
+                                display:block;
+                                margin-bottom:8px;
+                                color:#465260;
+                                font-size:12px;
+                                font-weight:700;
+                            "
+                        >
+
+                            Titre de l'actualité
+
+                        </label>
+
+
+                        <input
+                            type="text"
+                            name="titre"
+                            maxlength="200"
+                            required
+                            value="<?= e(
+                                $edition['titre']
+                                ?? ''
+                            ) ?>"
+                            placeholder="Titre de l'actualité"
+                            style="
+                                width:100%;
+                                height:46px;
+                                padding:0 14px;
+                                box-sizing:border-box;
+                                border:1px solid #dfe6eb;
+                                border-radius:8px;
+                                outline:none;
+                                font-size:13px;
+                            "
+                        >
 
                     </div>
 
 
-                    <h2>
+                    <!-- CONTENU -->
 
-                        Impossible de charger les actualités
-
-                    </h2>
-
-
-                    <p>
-
-                        Une erreur est survenue lors du
-                        chargement des informations.
-
-                    </p>
-
-
-                    <a
-                        href="actualites.php"
-                        class="news-btn orange"
+                    <div
+                        style="
+                            grid-column:1 / -1;
+                        "
                     >
 
-                        Réessayer
+                        <label
+                            style="
+                                display:block;
+                                margin-bottom:8px;
+                                color:#465260;
+                                font-size:12px;
+                                font-weight:700;
+                            "
+                        >
 
-                    </a>
+                            Contenu
+
+                        </label>
+
+
+                        <textarea
+                            name="contenu"
+                            required
+                            rows="8"
+                            placeholder="Rédigez le contenu de l'actualité..."
+                            style="
+                                width:100%;
+                                padding:13px 14px;
+                                box-sizing:border-box;
+                                border:1px solid #dfe6eb;
+                                border-radius:8px;
+                                outline:none;
+                                resize:vertical;
+                                font-family:inherit;
+                                font-size:13px;
+                                line-height:1.6;
+                            "
+                        ><?= e(
+                            $edition['contenu']
+                            ?? ''
+                        ) ?></textarea>
+
+                    </div>
+
+
+                    <!-- IMAGE -->
+
+                    <div>
+
+                        <label
+                            style="
+                                display:block;
+                                margin-bottom:8px;
+                                color:#465260;
+                                font-size:12px;
+                                font-weight:700;
+                            "
+                        >
+
+                            Image
+
+                        </label>
+
+
+                        <input
+                            type="file"
+                            name="image"
+                            accept=".jpg,.jpeg,.png,.webp"
+                            style="
+                                width:100%;
+                                box-sizing:border-box;
+                                padding:11px;
+                                border:1px solid #dfe6eb;
+                                border-radius:8px;
+                                background:#fff;
+                                font-size:12px;
+                            "
+                        >
+
+
+                        <small
+                            style="
+                                display:block;
+                                margin-top:7px;
+                                color:#8a95a4;
+                                font-size:11px;
+                            "
+                        >
+
+                            JPG, JPEG, PNG ou WEBP — maximum 5 Mo.
+
+                        </small>
+
+
+                        <?php if (
+                            $edition
+                            &&
+                            !empty(
+                                $edition['image']
+                            )
+                        ): ?>
+
+                            <div
+                                style="
+                                    margin-top:12px;
+                                "
+                            >
+
+                                <img
+                                    src="<?= e(
+                                        $imageUrl
+                                        . basename(
+                                            (string)
+                                            $edition['image']
+                                        )
+                                    ) ?>"
+                                    alt="Image actuelle"
+                                    style="
+                                        width:120px;
+                                        height:80px;
+                                        object-fit:cover;
+                                        border-radius:7px;
+                                        border:1px solid #e5eaf0;
+                                    "
+                                >
+
+                                <small
+                                    style="
+                                        display:block;
+                                        margin-top:5px;
+                                        color:#8a95a4;
+                                        font-size:10px;
+                                    "
+                                >
+
+                                    Image actuelle
+
+                                </small>
+
+                            </div>
+
+                        <?php endif; ?>
+
+                    </div>
+
+
+                    <!-- STATUT -->
+
+                    <div>
+
+                        <label
+                            style="
+                                display:block;
+                                margin-bottom:8px;
+                                color:#465260;
+                                font-size:12px;
+                                font-weight:700;
+                            "
+                        >
+
+                            Statut
+
+                        </label>
+
+
+                        <select
+                            name="statut"
+                            style="
+                                width:100%;
+                                height:46px;
+                                padding:0 12px;
+                                border:1px solid #dfe6eb;
+                                border-radius:8px;
+                                background:#fff;
+                                outline:none;
+                                font-size:13px;
+                            "
+                        >
+
+                            <option
+                                value="Publiée"
+                                <?= (
+                                    ($edition['statut'] ?? 'Publiée')
+                                    ===
+                                    'Publiée'
+                                )
+                                    ? 'selected'
+                                    : ''
+                                ?>
+                            >
+                                Publiée
+                            </option>
+
+
+                            <option
+                                value="Brouillon"
+                                <?= (
+                                    ($edition['statut'] ?? '')
+                                    ===
+                                    'Brouillon'
+                                )
+                                    ? 'selected'
+                                    : ''
+                                ?>
+                            >
+                                Brouillon
+                            </option>
+
+                        </select>
+
+                    </div>
 
                 </div>
 
 
-            <?php elseif (!empty($actualites)): ?>
+                <!-- BOUTONS -->
 
+                <div
+                    style="
+                        display:flex;
+                        gap:10px;
+                        margin-top:22px;
+                    "
+                >
 
-                <!-- =================================================
-                     GRILLE
-                ================================================== -->
+                    <button
+                        type="submit"
+                        name="enregistrer_actualite"
+                        value="1"
+                        style="
+                            height:44px;
+                            padding:0 20px;
+                            border:0;
+                            border-radius:8px;
+                            color:#fff;
+                            background:#00a3e0;
+                            cursor:pointer;
+                            font-size:12px;
+                            font-weight:800;
+                        "
+                    >
 
-                <div class="news-grid">
+                        <i class="fa-solid fa-save"></i>
 
-
-                    <?php foreach (
-                        $actualites
-                        as $actualite
-                    ): ?>
-
-
-                        <?php
-
-                        $id = (int)(
-                            $actualite['id']
-                            ?? 0
-                        );
-
-
-                        $titre = trim(
-                            (string)(
-                                $actualite['titre']
-                                ?? 'Actualité'
-                            )
-                        );
-
-
-                        $contenu =
-                            (string)(
-                                $actualite['contenu']
-                                ?? ''
-                            );
-
-
-                        $image =
-                            $actualite['image']
-                            ?? null;
-
-
-                        $date =
-                            $actualite[
-                                'date_publication'
-                            ]
-                            ?? null;
-
-
-                        $auteur = trim(
-                            (string)(
-                                $actualite['auteur']
-                                ?? ''
-                            )
-                        );
-
+                        <?= $edition
+                            ? 'Enregistrer les modifications'
+                            : 'Publier l’actualité'
                         ?>
 
+                    </button>
 
-                        <article
-                            class="news-card"
+
+                    <?php if ($edition): ?>
+
+                        <a
+                            href="actualites.php"
+                            style="
+                                height:44px;
+                                padding:0 18px;
+                                display:inline-flex;
+                                align-items:center;
+                                justify-content:center;
+                                box-sizing:border-box;
+                                border-radius:8px;
+                                color:#687385;
+                                background:#f1f4f6;
+                                text-decoration:none;
+                                font-size:12px;
+                                font-weight:800;
+                            "
                         >
 
+                            Annuler
 
-                            <!-- IMAGE -->
+                        </a>
 
-                            <a
-                                href="actualite-details.php?id=<?= $id ?>"
-                                class="news-image"
-                            >
+                    <?php endif; ?>
+
+                </div>
+
+            </form>
+
+        </section>
 
 
-                                <img
-                                    src="<?= e(
-                                        imageActualite(
-                                            $image
-                                        )
-                                    ) ?>"
-                                    alt="<?= e(
-                                        $titre
-                                    ) ?>"
-                                    loading="lazy"
+        <!-- =====================================================
+             RECHERCHE
+        ====================================================== -->
+
+        <section
+            class="admin-panel"
+            style="margin-bottom:25px;"
+        >
+
+            <form
+                method="GET"
+                action="actualites.php"
+                style="
+                    display:flex;
+                    gap:12px;
+                    align-items:center;
+                    flex-wrap:wrap;
+                "
+            >
+
+                <div
+                    style="
+                        flex:1;
+                        min-width:250px;
+                        position:relative;
+                    "
+                >
+
+                    <i
+                        class="fa-solid fa-magnifying-glass"
+                        style="
+                            position:absolute;
+                            left:15px;
+                            top:50%;
+                            transform:translateY(-50%);
+                            color:#9aa5b4;
+                        "
+                    ></i>
+
+
+                    <input
+                        type="text"
+                        name="recherche"
+                        value="<?= e($recherche) ?>"
+                        placeholder="Rechercher une actualité..."
+                        style="
+                            width:100%;
+                            height:46px;
+                            padding:0 15px 0 43px;
+                            box-sizing:border-box;
+                            border:1px solid #dfe6eb;
+                            border-radius:8px;
+                            outline:none;
+                            font-size:13px;
+                        "
+                    >
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    style="
+                        height:46px;
+                        padding:0 20px;
+                        border:0;
+                        border-radius:8px;
+                        color:#fff;
+                        background:#00a3e0;
+                        cursor:pointer;
+                        font-size:13px;
+                        font-weight:700;
+                    "
+                >
+
+                    <i class="fa-solid fa-search"></i>
+
+                    Rechercher
+
+                </button>
+
+
+                <?php if ($recherche !== ''): ?>
+
+                    <a
+                        href="actualites.php"
+                        style="
+                            height:46px;
+                            padding:0 18px;
+                            display:inline-flex;
+                            align-items:center;
+                            justify-content:center;
+                            border-radius:8px;
+                            color:#687385;
+                            background:#f1f4f6;
+                            text-decoration:none;
+                            font-size:13px;
+                            font-weight:700;
+                        "
+                    >
+
+                        Réinitialiser
+
+                    </a>
+
+                <?php endif; ?>
+
+            </form>
+
+        </section>
+
+
+        <!-- =====================================================
+             LISTE
+        ====================================================== -->
+
+        <section class="admin-panel">
+
+
+            <div class="admin-panel-header">
+
+                <span>
+                    PUBLICATIONS
+                </span>
+
+                <h2>
+                    Liste des actualités
+                </h2>
+
+            </div>
+
+
+            <?php if (empty($actualites)): ?>
+
+                <div
+                    style="
+                        padding:50px 20px;
+                        text-align:center;
+                        color:#7b8796;
+                    "
+                >
+
+                    <i
+                        class="fa-solid fa-newspaper"
+                        style="
+                            display:block;
+                            margin-bottom:15px;
+                            color:#c5cdd5;
+                            font-size:40px;
+                        "
+                    ></i>
+
+
+                    <p>
+                        Aucune actualité trouvée.
+                    </p>
+
+                </div>
+
+            <?php else: ?>
+
+
+                <div
+                    style="
+                        width:100%;
+                        overflow-x:auto;
+                    "
+                >
+
+                    <table
+                        style="
+                            width:100%;
+                            min-width:950px;
+                            border-collapse:collapse;
+                        "
+                    >
+
+                        <thead>
+
+                            <tr>
+
+                                <th
+                                    style="
+                                        padding:14px;
+                                        text-align:left;
+                                        color:#7b8796;
+                                        background:#f7f9fb;
+                                        border-bottom:1px solid #e5eaf0;
+                                        font-size:11px;
+                                    "
+                                >
+                                    ACTUALITÉ
+                                </th>
+
+
+                                <th
+                                    style="
+                                        padding:14px;
+                                        text-align:left;
+                                        color:#7b8796;
+                                        background:#f7f9fb;
+                                        border-bottom:1px solid #e5eaf0;
+                                        font-size:11px;
+                                    "
+                                >
+                                    CONTENU
+                                </th>
+
+
+                                <th
+                                    style="
+                                        padding:14px;
+                                        text-align:left;
+                                        color:#7b8796;
+                                        background:#f7f9fb;
+                                        border-bottom:1px solid #e5eaf0;
+                                        font-size:11px;
+                                    "
+                                >
+                                    STATUT
+                                </th>
+
+
+                                <th
+                                    style="
+                                        padding:14px;
+                                        text-align:left;
+                                        color:#7b8796;
+                                        background:#f7f9fb;
+                                        border-bottom:1px solid #e5eaf0;
+                                        font-size:11px;
+                                    "
+                                >
+                                    DATE
+                                </th>
+
+
+                                <th
+                                    style="
+                                        padding:14px;
+                                        text-align:right;
+                                        color:#7b8796;
+                                        background:#f7f9fb;
+                                        border-bottom:1px solid #e5eaf0;
+                                        font-size:11px;
+                                    "
+                                >
+                                    ACTIONS
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+
+                        <?php foreach (
+                            $actualites
+                            as $actualite
+                        ): ?>
+
+
+                            <?php
+
+                            $idActualite =
+                                (int) $actualite['id'];
+
+                            $statutActualite =
+                                (string) (
+                                    $actualite['statut']
+                                    ?? ''
+                                );
+
+                            $image =
+                                basename(
+                                    (string) (
+                                        $actualite['image']
+                                        ?? ''
+                                    )
+                                );
+
+                            ?>
+
+
+                            <tr>
+
+
+                                <!-- ACTUALITÉ -->
+
+                                <td
+                                    style="
+                                        padding:15px 14px;
+                                        border-bottom:1px solid #edf0f3;
+                                    "
                                 >
 
+                                    <div
+                                        style="
+                                            display:flex;
+                                            align-items:center;
+                                            gap:12px;
+                                        "
+                                    >
 
-                                <span
-                                    class="news-category"
+                                        <?php if ($image !== ''): ?>
+
+                                            <img
+                                                src="<?= e(
+                                                    $imageUrl
+                                                    . $image
+                                                ) ?>"
+                                                alt="<?= e(
+                                                    $actualite['titre']
+                                                ) ?>"
+                                                style="
+                                                    width:70px;
+                                                    height:50px;
+                                                    flex-shrink:0;
+                                                    object-fit:cover;
+                                                    border-radius:7px;
+                                                    border:1px solid #e5eaf0;
+                                                "
+                                            >
+
+                                        <?php else: ?>
+
+                                            <div
+                                                style="
+                                                    width:70px;
+                                                    height:50px;
+                                                    flex-shrink:0;
+                                                    display:flex;
+                                                    align-items:center;
+                                                    justify-content:center;
+                                                    border-radius:7px;
+                                                    color:#9aa5b4;
+                                                    background:#f1f4f6;
+                                                    font-size:18px;
+                                                "
+                                            >
+
+                                                <i class="fa-solid fa-image"></i>
+
+                                            </div>
+
+                                        <?php endif; ?>
+
+
+                                        <div>
+
+                                            <strong
+                                                style="
+                                                    display:block;
+                                                    max-width:280px;
+                                                    color:#26313e;
+                                                    font-size:13px;
+                                                "
+                                            >
+
+                                                <?= e(
+                                                    $actualite['titre']
+                                                ) ?>
+
+                                            </strong>
+
+
+                                            <small
+                                                style="
+                                                    color:#9aa5b4;
+                                                    font-size:10px;
+                                                "
+                                            >
+
+                                                ID #<?= $idActualite ?>
+
+                                            </small>
+
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
+
+                                <!-- CONTENU -->
+
+                                <td
+                                    style="
+                                        max-width:320px;
+                                        padding:15px 14px;
+                                        border-bottom:1px solid #edf0f3;
+                                        color:#687385;
+                                        font-size:12px;
+                                        line-height:1.5;
+                                    "
                                 >
 
-                                    SOFTEXPRESS
+                                    <?php
 
-                                </span>
+                                    $contenu =
+                                        strip_tags(
+                                            (string)
+                                            $actualite['contenu']
+                                        );
+
+                                    ?>
+
+                                    <?= e(
+                                        mb_strlen($contenu) > 110
+                                            ? mb_substr(
+                                                $contenu,
+                                                0,
+                                                110
+                                            ) . '…'
+                                            : $contenu
+                                    ) ?>
+
+                                </td>
 
 
-                                <span
-                                    class="news-image-overlay"
+                                <!-- STATUT -->
+
+                                <td
+                                    style="
+                                        padding:15px 14px;
+                                        border-bottom:1px solid #edf0f3;
+                                    "
                                 >
-
-                                    <i
-                                        class="fa-solid fa-arrow-right"
-                                    ></i>
-
-                                </span>
-
-
-                            </a>
-
-
-                            <!-- CONTENU -->
-
-                            <div
-                                class="news-content"
-                            >
-
-
-                                <!-- DATE / AUTEUR -->
-
-                                <div
-                                    class="news-meta"
-                                >
-
-
-                                    <span>
-
-                                        <i
-                                            class="fa-regular fa-calendar"
-                                        ></i>
-
-
-                                        <?= e(
-                                            dateActualite(
-                                                $date
-                                            )
-                                        ) ?>
-
-                                    </span>
-
 
                                     <?php if (
-                                        $auteur !== ''
+                                        $statutActualite
+                                        ===
+                                        'Publiée'
                                     ): ?>
 
-                                        <span>
+                                        <span
+                                            style="
+                                                display:inline-flex;
+                                                align-items:center;
+                                                gap:6px;
+                                                padding:6px 10px;
+                                                border-radius:20px;
+                                                color:#168746;
+                                                background:#edf9f2;
+                                                font-size:10px;
+                                                font-weight:800;
+                                            "
+                                        >
 
-                                            <i
-                                                class="fa-regular fa-user"
-                                            ></i>
+                                            <i class="fa-solid fa-circle-check"></i>
 
+                                            Publiée
 
-                                            <?= e(
-                                                $auteur
-                                            ) ?>
+                                        </span>
+
+                                    <?php else: ?>
+
+                                        <span
+                                            style="
+                                                display:inline-flex;
+                                                align-items:center;
+                                                gap:6px;
+                                                padding:6px 10px;
+                                                border-radius:20px;
+                                                color:#b86b00;
+                                                background:#fff3df;
+                                                font-size:10px;
+                                                font-weight:800;
+                                            "
+                                        >
+
+                                            <i class="fa-solid fa-file"></i>
+
+                                            Brouillon
 
                                         </span>
 
                                     <?php endif; ?>
 
+                                </td>
 
-                                </div>
+
+                                <!-- DATE -->
+
+                                <td
+                                    style="
+                                        padding:15px 14px;
+                                        border-bottom:1px solid #edf0f3;
+                                        color:#687385;
+                                        font-size:12px;
+                                        white-space:nowrap;
+                                    "
+                                >
+
+                                    <?= date(
+                                        'd/m/Y H:i',
+                                        strtotime(
+                                            (string)
+                                            $actualite['date_publication']
+                                        )
+                                    ) ?>
+
+                                </td>
 
 
-                                <!-- TITRE -->
+                                <!-- ACTIONS -->
 
-                                <h3>
+                                <td
+                                    style="
+                                        padding:15px 14px;
+                                        border-bottom:1px solid #edf0f3;
+                                        text-align:right;
+                                        white-space:nowrap;
+                                    "
+                                >
 
+
+                                    <!-- MODIFIER -->
 
                                     <a
-                                        href="actualite-details.php?id=<?= $id ?>"
+                                        href="actualites.php?modifier=<?= $idActualite ?>"
+                                        title="Modifier"
+                                        style="
+                                            width:34px;
+                                            height:34px;
+                                            display:inline-flex;
+                                            align-items:center;
+                                            justify-content:center;
+                                            margin-right:5px;
+                                            border-radius:6px;
+                                            color:#00a3e0;
+                                            background:#eaf8fd;
+                                            text-decoration:none;
+                                        "
                                     >
 
-                                        <?= e(
-                                            $titre
-                                        ) ?>
+                                        <i class="fa-solid fa-pen"></i>
 
                                     </a>
 
 
-                                </h3>
+                                    <!-- STATUT -->
+
+                                    <form
+                                        method="POST"
+                                        action="actualites.php"
+                                        style="
+                                            display:inline-flex;
+                                            margin-right:5px;
+                                        "
+                                    >
+
+                                        <input
+                                            type="hidden"
+                                            name="actualite_id"
+                                            value="<?= $idActualite ?>"
+                                        >
 
 
-                                <!-- EXTRAIT -->
+                                        <select
+                                            name="statut"
+                                            onchange="this.form.submit()"
+                                            title="Modifier le statut"
+                                            style="
+                                                height:34px;
+                                                padding:0 7px;
+                                                border:1px solid #dfe6eb;
+                                                border-radius:6px;
+                                                color:#566170;
+                                                background:#fff;
+                                                font-size:10px;
+                                            "
+                                        >
 
-                                <p>
-
-                                    <?= e(
-                                        extrait(
-                                            $contenu
-                                        )
-                                    ) ?>
-
-                                </p>
-
-
-                                <!-- LIEN -->
-
-                                <a
-                                    href="actualite-details.php?id=<?= $id ?>"
-                                    class="news-read-more"
-                                >
-
-                                    Lire l'article
-
-                                    <i
-                                        class="fa-solid fa-arrow-right"
-                                    ></i>
-
-                                </a>
+                                            <option
+                                                value="Publiée"
+                                                <?= $statutActualite === 'Publiée'
+                                                    ? 'selected'
+                                                    : ''
+                                                ?>
+                                            >
+                                                Publiée
+                                            </option>
 
 
-                            </div>
+                                            <option
+                                                value="Brouillon"
+                                                <?= $statutActualite === 'Brouillon'
+                                                    ? 'selected'
+                                                    : ''
+                                                ?>
+                                            >
+                                                Brouillon
+                                            </option>
 
-                        </article>
-
-
-                    <?php endforeach; ?>
-
-
-                </div>
-
-
-            <?php else: ?>
-
-
-                <!-- =================================================
-                     AUCUNE ACTUALITÉ
-                ================================================== -->
-
-                <div class="news-empty">
+                                        </select>
 
 
-                    <div class="empty-icon">
+                                        <input
+                                            type="hidden"
+                                            name="modifier_statut"
+                                            value="1"
+                                        >
 
-                        <i
-                            class="fa-regular fa-newspaper"
-                        ></i>
-
-                    </div>
-
-
-                    <p class="news-label">
-
-                        ACTUALITÉS
-
-                    </p>
+                                    </form>
 
 
-                    <h2>
+                                    <!-- SUPPRIMER -->
 
-                        Aucune actualité pour le moment
+                                    <form
+                                        method="POST"
+                                        action="actualites.php"
+                                        style="
+                                            display:inline;
+                                        "
+                                        onsubmit="
+                                            return confirm(
+                                                'Voulez-vous vraiment supprimer cette actualité ?'
+                                            );
+                                        "
+                                    >
 
-                    </h2>
+                                        <input
+                                            type="hidden"
+                                            name="supprimer_id"
+                                            value="<?= $idActualite ?>"
+                                        >
 
 
-                    <p>
+                                        <button
+                                            type="submit"
+                                            title="Supprimer"
+                                            style="
+                                                width:34px;
+                                                height:34px;
+                                                border:0;
+                                                border-radius:6px;
+                                                color:#d13b3b;
+                                                background:#fff0f0;
+                                                cursor:pointer;
+                                            "
+                                        >
 
-                        Les nouvelles publications
-                        de SOFTEXPRESS apparaîtront
-                        automatiquement ici.
+                                            <i class="fa-solid fa-trash"></i>
 
-                    </p>
+                                        </button>
+
+                                    </form>
+
+                                </td>
+
+                            </tr>
 
 
-                    <a
-                        href="../index.php"
-                        class="news-btn orange"
-                    >
+                        <?php endforeach; ?>
 
-                        Retour à l'accueil
 
-                    </a>
+                        </tbody>
 
+                    </table>
 
                 </div>
 
@@ -1675,365 +2461,16 @@ try {
             <?php endif; ?>
 
 
-        </div>
+        </section>
 
-    </section>
 
+    </main>
 
-    <!-- =========================================================
-         CTA
-    ========================================================= -->
+</div>
 
-    <section class="news-cta">
 
+<?php
 
-        <div class="container news-cta-inner">
+require_once __DIR__ . '/includes/footer.php';
 
-
-            <div>
-
-
-                <p>
-
-                    SOFTEXPRESS
-
-                </p>
-
-
-                <h2>
-
-                    Une question sur nos services ?
-
-                </h2>
-
-
-                <span>
-
-                    Notre équipe est disponible pour
-                    vous accompagner.
-
-                </span>
-
-
-            </div>
-
-
-            <div class="news-cta-actions">
-
-
-                <a
-                    href="contact.php"
-                    class="news-btn orange"
-                >
-
-                    <i
-                        class="fa-regular fa-envelope"
-                    ></i>
-
-                    Nous contacter
-
-                </a>
-
-
-                <a
-                    href="formations.php"
-                    class="news-btn white"
-                >
-
-                    Découvrir nos formations
-
-                </a>
-
-
-            </div>
-
-
-        </div>
-
-    </section>
-
-
-</main>
-
-
-<!-- =========================================================
-     FOOTER
-========================================================= -->
-
-<footer>
-
-
-    <div class="container footer-grid">
-
-
-        <div>
-
-
-            <img
-                src="../assets/images/logo.png"
-                alt="SOFTEXPRESS"
-            >
-
-
-            <p>
-
-                Formation, équipements informatiques
-                et maintenance.
-
-            </p>
-
-
-        </div>
-
-
-        <div>
-
-
-            <h3>
-
-                Navigation
-
-            </h3>
-
-
-            <a href="../index.php">
-
-                Accueil
-
-            </a>
-
-
-            <a href="apropos.php">
-
-                À propos
-
-            </a>
-
-
-            <a href="formations.php">
-
-                Formations
-
-            </a>
-
-
-            <a href="produits.php">
-
-                Produits
-
-            </a>
-
-
-        </div>
-
-
-        <div>
-
-
-            <h3>
-
-                Services
-
-            </h3>
-
-
-            <a href="maintenance.php">
-
-                Maintenance
-
-            </a>
-
-
-            <a href="actualites.php">
-
-                Actualités
-
-            </a>
-
-
-            <a href="contact.php">
-
-                Contact
-
-            </a>
-
-
-            <a href="../auth/connexion.php">
-
-                Connexion
-
-            </a>
-
-
-        </div>
-
-
-    </div>
-
-
-    <div class="bottom">
-
-
-        <div class="container">
-
-
-            © <?= date('Y') ?> SOFTEXPRESS —
-            Tous droits réservés.
-
-
-        </div>
-
-
-    </div>
-
-
-</footer>
-
-
-<!-- =========================================================
-     JAVASCRIPT PRINCIPAL
-========================================================= -->
-
-<script src="../assets/js/main.js"></script>
-
-
-<!-- =========================================================
-     JAVASCRIPT PROFIL
-========================================================= -->
-
-<script>
-
-document.addEventListener(
-    'DOMContentLoaded',
-    function () {
-
-        const button =
-            document.getElementById(
-                'actualitesUserProfileButton'
-            );
-
-
-        const dropdown =
-            document.getElementById(
-                'actualitesUserDropdown'
-            );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Si aucun utilisateur connecté
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            !button
-            ||
-            !dropdown
-        ) {
-
-            return;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | OUVRIR / FERMER LE MENU
-        |--------------------------------------------------------------------------
-        */
-
-        button.addEventListener(
-            'click',
-            function (event) {
-
-                event.stopPropagation();
-
-
-                const ouvert =
-                    dropdown.classList.toggle(
-                        'show'
-                    );
-
-
-                button.setAttribute(
-                    'aria-expanded',
-                    ouvert
-                        ? 'true'
-                        : 'false'
-                );
-
-            }
-        );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | CLIC À L'EXTÉRIEUR
-        |--------------------------------------------------------------------------
-        */
-
-        document.addEventListener(
-            'click',
-            function (event) {
-
-                if (
-                    !dropdown.contains(
-                        event.target
-                    )
-                    &&
-                    !button.contains(
-                        event.target
-                    )
-                ) {
-
-                    dropdown.classList.remove(
-                        'show'
-                    );
-
-
-                    button.setAttribute(
-                        'aria-expanded',
-                        'false'
-                    );
-                }
-
-            }
-        );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | TOUCHE ESC
-        |--------------------------------------------------------------------------
-        */
-
-        document.addEventListener(
-            'keydown',
-            function (event) {
-
-                if (
-                    event.key === 'Escape'
-                ) {
-
-                    dropdown.classList.remove(
-                        'show'
-                    );
-
-
-                    button.setAttribute(
-                        'aria-expanded',
-                        'false'
-                    );
-                }
-
-            }
-        );
-
-    }
-);
-
-</script>
-
-
-</body>
-
-</html>
+?>

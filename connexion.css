@@ -1,0 +1,339 @@
+/* =========================================================
+   SOFTEXPRESS - CONNEXION
+========================================================= */
+
+.auth-page {
+    min-height: 100vh;
+
+    margin: 0;
+
+    background:
+        radial-gradient(
+            circle at 15% 20%,
+            rgba(0,163,224,.13),
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at 85% 80%,
+            rgba(249,157,28,.13),
+            transparent 30%
+        ),
+        #f5f9fb;
+}
+
+.auth-wrapper {
+    min-height: 100vh;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 40px 20px;
+
+    box-sizing: border-box;
+}
+
+.auth-card {
+    width: 100%;
+
+    max-width: 440px;
+
+    padding: 40px;
+
+    box-sizing: border-box;
+
+    background: white;
+
+    border: 1px solid #e2e9ed;
+
+    border-radius: 15px;
+
+    box-shadow:
+        0 20px 60px rgba(0,0,0,.08);
+}
+
+.auth-logo {
+    display: block;
+
+    width: 145px;
+
+    margin: 0 auto 25px;
+
+    text-align: center;
+}
+
+.auth-logo img {
+    display: block;
+
+    width: 100%;
+
+    height: auto;
+
+    max-height: 70px;
+
+    object-fit: contain;
+}
+
+.auth-header {
+    text-align: center;
+
+    margin-bottom: 25px;
+}
+
+.auth-header p {
+    margin: 0 0 7px;
+
+    color: #00A3E0;
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    letter-spacing: 2px;
+}
+
+.auth-header h1 {
+    margin: 0 0 9px;
+
+    color: #192831;
+
+    font-size: 32px;
+}
+
+.auth-header span {
+    color: #788690;
+
+    font-size: 12px;
+}
+
+.auth-alert {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    margin-bottom: 20px;
+
+    padding: 12px 14px;
+
+    color: #9b3030;
+
+    background: #fff2f2;
+
+    border: 1px solid #f0d0d0;
+
+    border-radius: 7px;
+
+    font-size: 12px;
+}
+
+.auth-alert span {
+    width: 21px;
+    height: 21px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    color: white;
+
+    background: #d9534f;
+
+    border-radius: 50%;
+
+    font-weight: 800;
+}
+
+.auth-form {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 18px;
+}
+
+.auth-group {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 7px;
+}
+
+.auth-group label {
+    color: #34434c;
+
+    font-size: 11px;
+
+    font-weight: 800;
+}
+
+.auth-group input {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 13px 14px;
+
+    color: #26343d;
+
+    background: #fbfcfd;
+
+    border: 1px solid #dce5e9;
+
+    border-radius: 7px;
+
+    outline: none;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    transition: .2s ease;
+}
+
+.auth-group input:focus {
+    background: white;
+
+    border-color: #00A3E0;
+
+    box-shadow:
+        0 0 0 3px rgba(0,163,224,.08);
+}
+
+.auth-submit {
+    min-height: 48px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 12px;
+
+    margin-top: 4px;
+
+    color: white;
+
+    background:
+        linear-gradient(
+            100deg,
+            #00A3E0,
+            #0085b7
+        );
+
+    border: 0;
+
+    border-radius: 7px;
+
+    cursor: pointer;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    font-weight: 800;
+
+    transition: .25s ease;
+}
+
+.auth-submit:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 8px 22px rgba(0,163,224,.2);
+}
+
+.auth-submit span {
+    font-size: 17px;
+}
+
+.auth-register {
+    margin-top: 25px;
+
+    padding-top: 22px;
+
+    border-top: 1px solid #edf0f2;
+
+    text-align: center;
+
+    font-size: 11px;
+}
+
+.auth-register span {
+    color: #7c8991;
+}
+
+.auth-register a {
+    display: inline-block;
+
+    margin-left: 5px;
+
+    color: #00A3E0;
+
+    font-weight: 800;
+
+    text-decoration: none;
+}
+
+.auth-register a:hover {
+    color: #F99D1C;
+}
+
+.auth-back {
+    display: block;
+
+    margin-top: 20px;
+
+    color: #87939a;
+
+    text-align: center;
+
+    text-decoration: none;
+
+    font-size: 10px;
+}
+
+.auth-back:hover {
+    color: #00A3E0;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 500px) {
+
+    .auth-wrapper {
+        padding: 20px 15px;
+    }
+
+    .auth-card {
+        padding: 28px 20px;
+    }
+
+    .auth-logo {
+        width: 125px;
+    }
+
+    .auth-header h1 {
+        font-size: 28px;
+    }
+
+    .auth-register span {
+        display: block;
+
+        margin-bottom: 5px;
+    }
+
+    .auth-register a {
+        margin-left: 0;
+    }
+
+}
